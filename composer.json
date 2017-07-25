@@ -12,7 +12,7 @@
     },
     "autoload": {
         "psr-0": {
-            "App\\": "src"
+            "App\\": "App"
         }
     },
     "authors": [
