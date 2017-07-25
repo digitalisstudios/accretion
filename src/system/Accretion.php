@@ -52,14 +52,5 @@
                 if($route) Controller::get();
             }
         }
-        
-        public function show_static($obj = null){
-
-            if(is_null($obj)){
-                $obj = $this;
-            }
-            $class = new ReflectionClass($obj);
-            return $class->getStaticProperties();
-        }
     }
 ?>

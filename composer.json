@@ -1,14 +1,24 @@
 {
     "name": "dvicemuse/accretion",
     "description": "The Accretion Framework",
-    "type": "project",
+    "keywords": ["framework", "accretion"],
     "license": "MIT",
+    "type": "project",
+    "require": {
+        "php": ">=5.4"
+    },
+    "require-dev": {
+
+    },
+    "autoload": {
+        "psr-0": {
+            "App\\": "src"
+        }
+    },
     "authors": [
         {
             "name": "Brandon Moore",
             "email": "brandon@digitalisstudios.com"
         }
-    ],
-    "minimum-stability": "stable",
-    "require": {}
+    ]
 }
