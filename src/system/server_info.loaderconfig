@@ -1,0 +1,5 @@
+{
+	"HTTP_HOST" 	: "localhost",
+	"SERVER_ADDR" 	: "::1",
+	"dev_mode		: "false"
+}
