@@ -22,8 +22,7 @@
 			$sub_header 	= (isset($this->_disable_subheader) && $this->_disable_subheader === true) ? false : $sub_header;
 			$template_path 	= $controller === false ? \Accretion::$template_path : VIEW_PATH.$controller.'/';
 			$template 		= !$template ? \Accretion::$template_name : $template;
-			$file_path 		= str_replace('//', '/', $template_path.'/'.$template.'.php');
-			
+			$file_path 		= str_replace('//', '/', $template_path.'/'.$template.'.php');			
 
 			//LOAD HEADER AND SUBHEADER IF NEEDED
 			if($headers) \View::header();

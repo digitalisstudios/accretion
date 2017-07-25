@@ -9,7 +9,7 @@
 	$config['model_schema'] = false;
 
 	//GLOBAL ENCRYPTION KEY
-	$config['encryption_key'] = "COMPILE_ENCRYPTION_KEY";
+	$config['encryption_key'] = "fa9bd819327fe7b9bd5ca31453837962bb7aee24d3e6b281d2fe66c5acd74810";
 
 	//DEFAULT CSS
 	$config['css'] = array(

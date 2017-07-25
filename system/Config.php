@@ -22,7 +22,8 @@
 			define('HELPER_PATH', APP_PATH.'helper/');
 			define('MODEL_PATH', APP_PATH.'model/');
 			define('VENDOR_PATH', APP_PATH.'vendor/');
-			define('VIEW_PATH', APP_PATH.'view/');
+			define('PUBLIC_PATH', APP_PATH.'public/');
+			define('VIEW_PATH', PUBLIC_PATH.'view/');
 			define('JS_PATH', VIEW_PATH.'js/');
 			define('CSS_PATH', VIEW_PATH.'css/');
 
