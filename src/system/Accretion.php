@@ -5,18 +5,18 @@
 	class Accretion {
 
 			//GLOBAL VARIABLES
-		public static $Db 					= false;
-		public static $Auth 				= false;
-		public static $server_config 		= false;
-		public static $config 				= false;
-		public static $controller_name 		= false;
-		public static $controller 			= false;
-		public static $controller_object 	= false;
-		public static $template_name 		= false;
-		public static $template_path 		= false;
-		public static $method_name 			= false;
-		public static $dev_mode 			= false;
-		public static $controllers 			= array();
+		public static $Db					= false;
+		public static $Auth					= false;
+		public static $server_config		= false;
+		public static $config				= false;
+		public static $controller_name		= false;
+		public static $controller			= false;
+		public static $controller_object	= false;
+		public static $template_name		= false;
+		public static $template_path		= false;
+		public static $method_name			= false;
+		public static $dev_mode				= false;
+		public static $controllers			= array();
 
 		public function __construct($route = false){
 
