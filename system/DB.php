@@ -35,7 +35,7 @@
 
 		}
 
-		public static function set_db($alias = 'app'){
+		public static function set_db($alias = 'main'){
 			
 			//GET THE DB CONFIG
 			$dbconf = Config::get('database')->$alias;				

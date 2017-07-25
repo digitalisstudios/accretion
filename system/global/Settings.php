@@ -9,7 +9,7 @@
 	$config['model_schema'] = false;
 
 	//GLOBAL ENCRYPTION KEY
-	$config['encryption_key'] = "fa9bd819327fe7b9bd5ca31453837962bb7aee24d3e6b281d2fe66c5acd74810";
+	$config['encryption_key'] = "COMPILE_ENCRYPTION_KEY";
 
 	//DEFAULT CSS
 	$config['css'] = array(
@@ -39,7 +39,7 @@
 	$config['database'] = array(
 		
 		//THE FIRST SET OF CREDENTIALS SHOULD ALWAYS BE THE APPLICATIONS DATABASE
-		'main' => array(			
+		'main_by_server' => array(			
 
 			//IF WE ARE ON THE DEV SERVER
 			'dev' => array(
@@ -59,7 +59,7 @@
 		),
 
 		//ALLOW ACCESS TO OTHER DATABASES BY ADDING THEM TO THE ARRAY
-		/*'other' => array(
+		/*'other_by_server' => array(
 
 			//IF WE ARE ON THE DEV SERVER
 			'dev' => array(
