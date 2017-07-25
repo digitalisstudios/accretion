@@ -16,7 +16,7 @@
         public static $dev_mode             = false;
         public static $controllers          = array();
 
-        public function __construct($route = false){
+        public function __construct(){
 
             //ONLY RUN INITIALIZATION IF THE CALLING CLASS IS THE FRAMEWORK
             if(get_class($this) == 'Accretion'){
@@ -41,14 +41,21 @@
                 ];
 
                 //LOAD THE CLASSES
-                foreach($classes as $class) require_once dirname(__FILE__).'/'.$class.'.php';                   
+                foreach($classes as $class) require_once __DIR__.'/'.$class.'.php';                   
 
                 //INITIALIZE THE CONFIGURATION
-                Config::init();
-
-                //ROUTE THE FRAMEWORK IF NEEDED
-                if($route) Controller::get();
+                \Config::init();                
             }
+        }
+
+        //HANDLE ACCRETION ROUTING
+        public function route(){
+            
+            //GET THE CONTROLLER
+            \Controller::get();
+
+            //SEND BACK THE ACCRETION OBJECT
+            return $this;
         }
     }
 ?>

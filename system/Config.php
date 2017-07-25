@@ -27,20 +27,14 @@
 			define('CSS_PATH', VIEW_PATH.'css/');
 
 			//DEFINE WEB PATHS
-			define('WEB_PATH', '/');
-			//define('WEB_APP', '/'.str_replace(BASE_PATH, '', APP_PATH));
+			define('WEB_PATH', '/');	
 			
-			
-			if(isset($_SERVER['SCRIPT_NAME'])){
-				//WEB_APP = dirname($_SERVER['SCRIPT_NAME']).'/';
+			if(isset($_SERVER['SCRIPT_NAME'])){				
 				define('WEB_APP', str_replace('//', '/', dirname($_SERVER['SCRIPT_NAME']).'/'));
 			}
 			else{
 				define('WEB_APP', '/');
 			}
-			
-
-			
 			
 			define('WEB_VIEW_PATH', WEB_APP.'view/');
 			define('WEB_JS_PATH', WEB_VIEW_PATH.'js/');
