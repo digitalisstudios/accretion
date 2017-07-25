@@ -38,4 +38,4 @@ Thumbs.db
 
 server_info.loaderconfig
 system/global/Settings.back.php
-#system/global/Settings.php
+system/global/Settings.php
