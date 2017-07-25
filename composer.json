@@ -10,11 +10,6 @@
     "require-dev": {
 
     },
-    "autoload": {
-        "psr-0": {
-            "App\\": "App"
-        }
-    },
     "authors": [
         {
             "name": "Brandon Moore",
