@@ -1,5 +1,4 @@
 <?php
-
 	namespace dvicemuse\accretion;
 
 	class Accretion {
