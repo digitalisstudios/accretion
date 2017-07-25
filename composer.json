@@ -1,0 +1,14 @@
+{
+    "name": "dvicemuse/accretion",
+    "description": "The Accretion Framework",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Brandon Moore",
+            "email": "brandon@digitalisstudios.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {}
+}

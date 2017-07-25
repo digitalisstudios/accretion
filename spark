@@ -1,0 +1,40 @@
+#!/usr/bin/php
+<?php
+
+	include dirname(__FILE__).'/system/Loader.php';
+
+	$frm = new Loader;
+
+	class CLI extends Loader{
+
+		public function __construct($argv){
+			$this->route($argv);
+		}
+
+		public function route($argv){
+			if(method_exists($this, $argv[1])){
+				$method = $argv[1];
+				$this->$method($argv);
+			}
+			else{
+				echo "Error: No method found\n";
+			}
+		}
+
+		public function table_sync($argv){
+			echo "\n\nTable Sync Started\n\n";
+
+			$files = glob(APP_PATH.'model/*.php');
+			$_GET['model_sync'] = true;
+			foreach($files as $file){
+				$model_name = str_replace('.php', '', basename($file));
+				echo 'Updating '.$model_name."\n";
+				if($model_name == 'model_base') continue;
+				Model::$model_name();
+			}
+			echo "\n\nDone\n\n";
+		}
+	}
+
+	new CLI($argv);
+?>
