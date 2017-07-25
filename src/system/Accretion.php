@@ -1,9 +1,10 @@
 <?php
-	namespace dvicemuse\accretion;
+
+	namespace App;
 
 	class Accretion {
 
-		//GLOBAL VARIABLES
+			//GLOBAL VARIABLES
 		public static $Db 					= false;
 		public static $Auth 				= false;
 		public static $server_config 		= false;
@@ -18,40 +19,40 @@
 		public static $controllers 			= array();
 
 		public function __construct($route = false){
-			
-			//ONLY RUN INITIALIZATION IF THE CALLING CLASS IS THE FRAMEWORK
+
+				//ONLY RUN INITIALIZATION IF THE CALLING CLASS IS THE FRAMEWORK
 			if(get_class($this) == 'Accretion'){
 
-				//DEFINE THE CLASSES TO LOAD
+					//DEFINE THE CLASSES TO LOAD
 				$classes = [
-					'global/Global_Functions', 
-					'Session', 
-					'Request', 
-					'View', 
-					'Helper',
-					'Controller',
-					'ORM_Wrapper', 
-					'global/Global_Model_Method',
-					'Magic_Model',
-					'Model',
-					'DB', 
-					'Auth', 
-					'Config', 
-					'Reflect',
-					'Buffer',
+				'global/Global_Functions', 
+				'Session', 
+				'Request', 
+				'View', 
+				'Helper',
+				'Controller',
+				'ORM_Wrapper', 
+				'global/Global_Model_Method',
+				'Magic_Model',
+				'Model',
+				'DB', 
+				'Auth', 
+				'Config', 
+				'Reflect',
+				'Buffer',
 				];
 
-				//LOAD THE CLASSES
+					//LOAD THE CLASSES
 				foreach($classes as $class) require_once dirname(__FILE__).'/'.$class.'.php';					
 
-				//INITIALIZE THE CONFIGURATION
+					//INITIALIZE THE CONFIGURATION
 				Config::init();
 
-				//ROUTE THE FRAMEWORK IF NEEDED
+					//ROUTE THE FRAMEWORK IF NEEDED
 				if($route) Controller::get();
 			}
 		}
-	
+		
 		public function show_static($obj = null){
 
 			if(is_null($obj)){
