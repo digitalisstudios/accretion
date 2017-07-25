@@ -1,11 +1,11 @@
 #!/usr/bin/php
 <?php
 
-	include dirname(__FILE__).'/system/Loader.php';
+	include dirname(__FILE__).'/system/Accretion.php';
 
-	$frm = new Loader;
+	$frm = new Accretion;
 
-	class CLI extends Loader{
+	class CLI extends Accretion{
 
 		public function __construct($argv){
 			$this->route($argv);
