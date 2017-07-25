@@ -1,5 +1,7 @@
 <?php
 
+	namespace dvicemuse\accretion;
+
 	class Accretion {
 
 		//GLOBAL VARIABLES
