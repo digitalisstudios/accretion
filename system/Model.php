@@ -11,12 +11,18 @@
 //-------------------------------------// MODEL LOAD PROPERTY METHODS //---------------------------------//
 
 		public function only($only = array()){
-			if(!$this->_only){
+			if(!isset($this->_only)){
 				$this->_only = array();
 			}
-			foreach($only as $k => $v){
-				$this->_only[] = $v;
+			if(is_array($only)){
+				foreach($only as $k => $v){
+					$this->_only[] = $v;
+				}
 			}
+			elseif(is_string($only)){
+				$this->_only[] = $only;
+			}
+			
 			if(empty($this->_only)){
 				unset($this->_only);
 			}
@@ -320,7 +326,7 @@
 						}
 
 						//IF THERE IS AN AFTER LOAD METHOD RUN IT				
-						if(!isset($model->_only) && isset($model->_after_load) && $use_hooks === true){					
+						if((!isset($model->_only) && !isset($this->_only)) && isset($model->_after_load) && $use_hooks === true){					
 							foreach($model->_after_load as $method){
 								if(method_exists($model, $method));
 								$model->$method();
@@ -803,8 +809,17 @@
 					}
 				}
 				else{
+
+					$model_obj = Model::get($model);
+
+					if($model_obj){
+						return $model_obj->table_name();
+					}
+					else{
+						return false;
+					}
 					
-					return Model::get($model)->table_name();
+					//return Model::get($model)->table_name();
 				}			
 			}
 
@@ -847,11 +862,23 @@
 			
 			$data = array();
 
-			foreach($this->structure as $k => $v){
-				if(isset($this->$k)){
-					$data[$k] = $this->$k;
-				}			
+			if(isset($this->structure)){
+				foreach($this->structure as $k => $v){
+					if(isset($this->$k)){
+						$data[$k] = $this->$k;
+					}			
+				}
 			}
+			else{
+				$data = json_decode(json_encode($this), true);
+				foreach($data as $k => $v){
+					if(substr($k, 0, 1) == '_'){
+						unset($data[$k]);
+					}
+				}
+			}
+
+			
 
 			return $data;
 		}

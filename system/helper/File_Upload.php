@@ -13,17 +13,24 @@
 			return $this;
 		}
 
-		public function files($files = array()){			
+		public function files($files = array()){
 
-			foreach($files['error'] as $key => $error){
-				if($error !== 4){
-					$this->files[] = array(
-						'name' 		=> $files['name'][$key],
-						'type' 		=> $files['type'][$key],
-						'tmp_name' 	=> $files['tmp_name'][$key],
-						'error' 	=> $files['error'][$key],
-						'size' 		=> $files['size'][$key]
-					);
+			if(is_array($files) && !empty($files)){
+				if(is_array($files['error'])){
+					foreach($files['error'] as $key => $error){
+						if($error !== 4){
+							$this->files[] = array(
+								'name' 		=> $files['name'][$key],
+								'type' 		=> $files['type'][$key],
+								'tmp_name' 	=> $files['tmp_name'][$key],
+								'error' 	=> $files['error'][$key],
+								'size' 		=> $files['size'][$key]
+							);
+						}
+					}
+				}
+				elseif($files['error'] !== 4){
+					$this->files[] = $files;
 				}
 			}
 

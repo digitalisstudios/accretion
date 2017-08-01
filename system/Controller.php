@@ -10,9 +10,14 @@
 
 		//LOAD A CONTROLLER AND OPTIONAL TEMPLATE
 		public static function get($controller = false, $template = false){
-			//INIT DEFAULTS
+			
+			//FORCE THE CONTROLLER
 			$controller 					= $controller === false ? Controller::parse_from_request() : Controller::parse_controller_path($controller);
 
+			//IF NO CONTROLLER PUT OUT 404 ERROR
+			if(is_null($controller)) \Request::error(404);			
+
+			//SET TEMPLATE AND CONTROLLER VARSs
 			$template_path 					= $controller->get_controller_template_path();
 			$template 						= $template === false ? $controller->get_requested_template() : $template;
 			Accretion::$controller 			= $controller;
@@ -210,13 +215,13 @@
 			//ASSUME WE NEED TO REDIRECT
 			$redirect = false;
 
-			if(!isset($_SESSION['user'])){
+			if(!isset($_SESSION['contact'])){
 				$redirect = true;
 			}
 			else{
 
 				//GET THE USER DATA
-				$user = $_SESSION['user'];
+				$user = $_SESSION['contact'];
 
 				//CHECK IF THE VARIABLE NAME MATHES THE VALUE
 				if(!is_null($var) && !is_null($value)){
@@ -234,7 +239,7 @@
 
 				//CHECK FOR USER ID
 				elseif(is_null($var)){
-					if(!isset($user['user_id'])){
+					if(!isset($user['contact_id'])){
 						$redirect = true;
 					}
 				}

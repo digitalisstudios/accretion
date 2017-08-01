@@ -26,6 +26,25 @@
 			
 		}
 
+		//RENDER A REQUEST ERROR
+		public static function error($type = 404){
+			
+			//SET THE RESPONSE CODE
+			http_response_code($type);
+
+			//LOAD THE ERROR TEMPLATE
+			$file_path = VIEW_PATH."http_error/".$type.".php";
+
+			if(file_exists($file_path)){
+				include VIEW_PATH."http_error/".$type.".php";
+			}
+			else{
+				echo "<h1>Error: {$type}</h1><br>";
+				echo "<p>The page you requested could not be found</p>";
+			}			
+			exit;
+		}
+
 		public function get($parameter = false){
 
 			if(isset($_SERVER['REQUEST_URI'])){			

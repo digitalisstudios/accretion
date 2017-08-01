@@ -40,7 +40,6 @@ class Accretion{
 $(window).load(function(){
 	spinner('hide');
 	Accretion = new Accretion();
-	console.log('here');
 	Accretion.Guid = new Guid();
 	Accretion.Modal = new Modal();
 	Accretion.Ajax = new Ajax();

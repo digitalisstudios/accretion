@@ -52,8 +52,27 @@
 				return Auth::$user;
 			}
 			else{
-				if(isset($_SESSION['user']['user_id'])){
-					Auth::$user = Model::get('User')->orm_load($_SESSION['user']['user_id']);					
+
+				//DEFAULTS
+				$model_name 	= 'User';
+				$session_name 	= 'user';
+				$model_key 		= 'user_id';
+
+				if(\Config::get('Auth')){
+					$a = \Config::get('Auth');
+					if(isset($a->model_name)){
+						$model_name = $a->model_name;
+					}
+					if(isset($a->session_name)){
+						$session_name = $a->session_name;
+					}
+					if(isset($a->model_key)){
+						$model_key = $a->model_key;
+					}
+				}
+
+				if(isset($_SESSION[$session_name][$model_key])){
+					Auth::$user = Model::get($model_name)->load($_SESSION[$session_name][$model_key]);					
 					return Auth::$user;
 				}
 			}

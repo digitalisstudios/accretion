@@ -3,13 +3,13 @@ class AjaxForm extends Ajax {
 		super();
 		$(document).off('submit.ajaxForm').on('submit.ajaxForm', '.ajax-form', function(e){
 			e.preventDefault();	
-			Accretion.Ajax.AjaxForm.submit(this);
+			Accretion.AjaxForm.submit(this);
 		})
 
 		$(document).off('submit.AjaxValidateForm').on('submit.AjaxValidateForm', 'form[validate]:not(.validated)', function(e){
 			e.preventDefault();
 			e.stopPropagation();
-			Accretion.Ajax.AjaxForm.validate(this);			
+			Accretion.AjaxForm.validate(this);			
 		});
 	}
 
@@ -20,8 +20,8 @@ class AjaxForm extends Ajax {
 				return;
 			}
 		}
-		spinner();
-		callback_name 		= $(ele).attr('callback');
+		spinner();		
+		var callback_name 	= $(ele).attr('callback');
 		var formdata 		= new FormData($(ele)[0]);
 		var submit_button 	= $(document.activeElement);
 		var json 			= $(ele).attr('data-json') == 'true' ? true : false;

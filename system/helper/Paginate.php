@@ -77,44 +77,28 @@
 
 		public function render_pagination(){
 
-			//GENERATE THE URL
-			$this->new_url = array();
-			foreach(explode('/', $_SERVER['REQUEST_URI']) as $url_part){
-				if(strpos($url_part, 'page=') === false){
-					$this->new_url[] = $url_part;
+			$this->_page_count = 1;
+
+			$this->new_url = array_values(array_filter(explode('/', WEB_APP.Accretion::$controller->get_controller_template_web_path().Accretion::$template_name)));
+			$this->url_without_rpp = $this->new_url;
+			$vars = \Request::get_vars();
+			foreach($vars as $k => $v){
+				if($k == 'page') continue;
+				$this->new_url[] = $k.'='.$v;
+				if($k !== 'rpp'){
+					$this->url_without_rpp[] = $k.'='.$v;
 				}
 			}
 
-			if($_GET['method']){
-				$included = array();
-				foreach($this->new_url as $k => $part){
-					if($k == 3){
-						$included[] = $_GET['method'];
-					}
-					$included[] = $part;
-				}
+			$this->new_url = '/'.implode('/', $this->new_url).'/';
+			$this->url_without_rpp = '/'.implode('/', $this->url_without_rpp).'/';
 
-				$this->new_url = $included;
-			}
-			
-
-			$this->new_url = implode('/', $this->new_url);
-			if(substr($this->new_url, -1) !== '/'){
-				$this->new_url .= '/';
-			}
-
-			if(!Request::get(3)){
-				$this->new_url .= 'index/';
-			}			
-
-			//CHECK IF RECORDS PER PAGE IS SET
-			$url_without_rpp = $this->new_url;
-			$rpp = $this->_limit;
 			if(Request::get('rpp')){
-				$url_without_rpp 	= str_replace('/rpp='.Request::get('rpp').'/', '/', $this->new_url);
-				$rpp 				= Request::get('rpp');
-				$this->_limit 		= $rpp;
+				$this->rpp = Request::get('rpp');
+				$this->_limit = $this->rpp;
 			}
+
+			$this->rpp = $this->_limit;
 
 			//FIND THE NUMBER OF PAGES
 			if($this->_total < $this->_limit){
@@ -164,7 +148,7 @@
 			endif;
 
 			$rpp_array 		= array('10','30','50','100','200','500','1000');
-			$rpp_array[] 	= $rpp;
+			$rpp_array[] 	= $this->rpp;
 			$rpp_array 		= array_unique($rpp_array);
 			$new_rpp 		= array();
 
@@ -173,6 +157,9 @@
 			}
 			ksort($new_rpp);
 			$this->rpp_array = $new_rpp;
+
+			//$this->url_without_rpp = $url_without_rpp;
+			//$this->rpp = $rpp;
 
 			View::get('navigation', 'Paginate', false, false);
 		}

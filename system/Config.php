@@ -28,10 +28,41 @@
 			define('CSS_PATH', VIEW_PATH.'css/');
 
 			//DEFINE WEB PATHS
-			define('WEB_PATH', '/');	
+			define('WEB_PATH', '/');			
 			
-			if(isset($_SERVER['SCRIPT_NAME'])){				
-				define('WEB_APP', str_replace('//', '/', dirname($_SERVER['SCRIPT_NAME']).'/'));
+			if(isset($_SERVER['SCRIPT_NAME'])){
+
+				$parts 			= array();
+				$script_parts 	= array_values(array_filter(explode('/', dirname($_SERVER['SCRIPT_NAME']))));
+				$uri_parts 		= array_values(array_filter(explode('/', dirname($_SERVER['REQUEST_URI']))));
+
+				if(empty($uri_parts)){
+					$web_app = '/';
+				}
+				else{
+					$found = false;
+					foreach($script_parts as $part){
+						if(!$found){
+							if($part == $uri_parts[0]){
+								$found = true;
+							}
+							else{
+								continue;
+							}
+						}
+
+						$parts[] = $part;
+					}
+					$web_app = "/".implode('/', $parts)."/";
+				}
+
+				$web_app = '/'.implode('/', array_values(array_filter(explode('/', $web_app)))).'/';
+
+				$web_app = $web_app == '//' ? '/' : $web_app;
+
+				define('WEB_APP', $web_app);
+				//define('WEB_APP', '/'.basename(dirname($_SERVER['SCRIPT_NAME'])).'/');	
+				//define('WEB_APP', str_replace('//', '/', dirname($_SERVER['SCRIPT_NAME']).'/'));
 			}
 			else{
 				define('WEB_APP', '/');

@@ -18,7 +18,7 @@
 				}
 			}
 
-			$headers 		= (\Request::is_ajax() && (!\Request::get('header') || \Request::get('header') !== 'true')) ? false : $headers; 
+			$headers 		= (\Request::is_ajax() && (!\Request::get('header') || \Request::get('header') !== 'true')) ? false : $headers;
 			$sub_header 	= (isset($this->_disable_subheader) && $this->_disable_subheader === true) ? false : $sub_header;
 			$template_path 	= $controller === false ? \Accretion::$template_path : VIEW_PATH.$controller.'/';
 			$template 		= !$template ? \Accretion::$template_name : $template;

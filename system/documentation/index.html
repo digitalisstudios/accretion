@@ -395,23 +395,11 @@
 
 								<h3>Global Functions</h3>
 
-								<blockquote>
-									The global functions file allows you to define a function that is accessible from anywhere in your application.
-								</blockquote>
-
-								<p>The global functions file is located in <span class="path-to">/system/global/Global_Functions.php</span></p>
-
 							</section>
 
 							<section id="getting-started-configuration-global-model-method">
 
 								<h3>Global Model Method</h3>
-
-								<blockquote>
-									The global model methods file allows you to define methods that every model in your application will have access too.
-								</blockquote>
-
-								<p>The global model method file is located in <span class="path-to">/system/global/Global_Model_Method.php</span></p>
 
 							</section>
 
@@ -420,56 +408,6 @@
 						<section id="getting-started-directory-structure">
 							<h2>Directory Structure</h2>
 						</section>
-
-						<ul>
-							<li>
-								controller
-								<ul>
-									<li>Controller_1.php</li>
-									<li>
-										Controller_1 (folder)
-										<ul>
-											<li>Sub_Controller_1.php</li>
-											<li>Sub_Controller_2.php</li>
-										</ul>
-									</li>
-								</ul>
-							</li>
-							<li>
-								helper
-								<ul>
-									<li>helper_1.php</li>
-									<li>helper_1.php</li>
-								</ul>
-							</li>
-							<li>
-								model
-								<ul>
-									<li>model_1.php</li>
-									<li>model_2.php</li>
-								</ul>
-							</li>
-							<li>
-								system
-								<ul>
-									<li>system_class.php</li>
-									<li>system_folder</li>
-								</ul>
-							</li>
-							<li>
-								public
-								<ul>
-									<li>index.php</li>
-									<li>
-										view
-										<ul>
-											<li>Controller_1</li>
-											<li>Controller_2</li>
-										</ul>
-									</li>
-								</ul>
-							</li>
-						</ul>
 
 					</section>
 
@@ -495,7 +433,7 @@
 										</blockquote>
 
 										<p>
-											The below example would be located at <span class="path-to">/controller/Dashboard.php</span>. This would allow you to use www.example.com/dashboard as a url and would point to the index method before loading the <span class="path-to">/public/view/Dashboard/index.php</span> file.
+											The below example would be located at <span class="path-to">/controller/Dashboard.php</span>. This would allow you to use www.example.com/dashboard as a url and would point to the index method before loading the <span class="path-to">/view/Dashboard/index.php</span> file.
 										</p>
 									</div>
 								</div>
@@ -550,7 +488,7 @@
 												<li>Call the login method in the Dashboard class.</li>
 												<li>Call the sub_footer.php file if exists</li>
 												<li>Call the footer.php file if exists</li>
-												<li>Try to load <span class="path-to">/public/view/Dashboard/login.php</span></li>
+												<li>Try to load <span class="path-to">/view/Dashboard/login.php</span></li>
 											</ul>											
 										</p>
 
@@ -671,7 +609,7 @@
 										<br>
 										<p>The following example shows how to create a sub controller and call it using the url <b>www.example.com/admin/notifications/latest</b></p>
 										<br>
-										<p>In this example the controller exists in <span class="path-to">/controller/Admin/Notifications.php</span><br> and a view exists in <span class="path-to">/public/view/Admin/Notifications/latest.php</span></p>
+										<p>In this example the controller exists in <span class="path-to">/controller/Admin/Notifications.php</span><br> and a view exists in <span class="path-to">/view/Admin/Notifications/latest.php</span></p>
 									</div>
 								</div>
 								
@@ -876,14 +814,14 @@
 		}
 
 		public function index(){
-			//this method will try to load <span class="path-to">/public/view/Admin/index.php</span>
+			//this method will try to load <span class="path-to">/view/Admin/index.php</span>
 		}
 
 		public function user(User $user){
 
 			//BOTH $user AND $this->user ARE AUTOMATICALLY SET
 
-			//this method will try to load <span class="path-to">/public/view/Admin/user.php</span>
+			//this method will try to load <span class="path-to">/view/Admin/user.php</span>
 		}		
 	}
 ?&#62;</pre>
@@ -941,14 +879,14 @@
 		}
 
 		public function index(){
-			//this method will try to load <span class="path-to">/public/view/Admin/index.php</span>
+			//this method will try to load <span class="path-to">/view/Admin/index.php</span>
 		}
 
 		public function user(User $get_user_id_as_user){
 
 			//BOTH $user AND $this->user ARE AUTOMATICALLY SET
 
-			//this method will try to load <span class="path-to">/public/view/Admin/user.php</span>
+			//this method will try to load <span class="path-to">/view/Admin/user.php</span>
 		}		
 	}
 ?&#62;</pre>
@@ -1179,19 +1117,19 @@
 		}
 
 		public function index(){
-			//this will load the view <span class="path-to">/public/view/Admin/index.php</span> with the header and footer.
+			//this will load the view <span class="path-to">/view/Admin/index.php</span> with the header and footer.
 		}
 
 		public function user(){
-			//this will load the view <span class="path-to">/public/view/Admin/user.php</span> without the header or footer.
+			//this will load the view <span class="path-to">/view/Admin/user.php</span> without the header or footer.
 		}
 
 		public function account(){
-			//this will load the view <span class="path-to">/public/view/Admin/account.php</span> without the header or footer.
+			//this will load the view <span class="path-to">/view/Admin/account.php</span> without the header or footer.
 		}
 
 		public function email(){
-			//this will load the view <span class="path-to">/public/view/Admin/email.php</span> without the header or footer.
+			//this will load the view <span class="path-to">/view/Admin/email.php</span> without the header or footer.
 		}
 	}
 ?&#62;</pre>									
@@ -1243,14 +1181,14 @@
 		}
 
 		public function index(){
-			//this will load the view <span class="path-to">/public/view/Admin/index.php</span> with the sub header and sub footer if they exist.
+			//this will load the view <span class="path-to">/view/Admin/index.php</span> with the sub header and sub footer if they exist.
 		}
 
 		public function user(){
 
 			\Controller::disable_subheader();
 
-			//this will load the view <span class="path-to">/public/view/Admin/user.php</span> without the sub header and sub footer.
+			//this will load the view <span class="path-to">/view/Admin/user.php</span> without the sub header and sub footer.
 		}
 	}
 ?&#62;</pre>									
@@ -1298,7 +1236,7 @@
 									<br>
 									<p>In the below example the view is loaded when the user visits <b>www.example.com/dashboard</b></p>
 
-									<p>In the below example the file is located at <span class="path-to">/public/view/Dashboard/index.php</span></p>
+									<p>In the below example the file is located at <span class="path-to">/view/Dashboard/index.php</span></p>
 								</div>
 							</div>
 
@@ -1394,9 +1332,9 @@
 									<div class="col-md-10 col-md-offset-2">
 										<h4>Basic Header And Footer</h4><br>
 
-										<p>The default header is loaded from <span class="path-to">/public/view/partial/header.php</span> but this can be overridden by the folder structure.</p>
+										<p>The default header is loaded from <span class="path-to">/view/partial/header.php</span> but this can be overridden by the folder structure.</p>
 
-										<p>Lets take a look at a basic header. This header will be loaded from <span class="path-to">/public/view/partial/header.php</span></p>
+										<p>Lets take a look at a basic header. This header will be loaded from <span class="path-to">/view/partial/header.php</span></p>
 									</div>
 								</div>
 								<br>
@@ -1422,7 +1360,7 @@
 								<br>
 								<div class="row">
 									<div class="col-md-10 col-md-offset-2">
-										<p>And below is a basic footer loaded from <span class="path-to">/public/view/partial/footer.php</span></p>
+										<p>And below is a basic footer loaded from <span class="path-to">/view/partial/footer.php</span></p>
 									</div>
 								</div>
 
@@ -1479,21 +1417,21 @@
 										</p>
 
 										<ol>
-											<li><span class="path-to">/public/view/partial/header.php</span></li>
-											<li><span class="path-to">/public/view/Dashboard/partial/header.php</span></li>
+											<li><span class="path-to">/view/partial/header.php</span></li>
+											<li><span class="path-to">/view/Dashboard/partial/header.php</span></li>
 										</ol>
 
 										<br>
 
-										<p>If the url <b>www.example.com/</b> was requested the <span class="path-to">/public/view/partial/header.php</span> would be loaded.</p>
-										<p>But if the url <b>www.example.com/Dashboard</b> was requested the <span class="path-to">/public/view/Dashboard/partial/header.php</span> would be loaded.</p>
+										<p>If the url <b>www.example.com/</b> was requested the <span class="path-to">/view/partial/header.php</span> would be loaded.</p>
+										<p>But if the url <b>www.example.com/Dashboard</b> was requested the <span class="path-to">/view/Dashboard/partial/header.php</span> would be loaded.</p>
 
 										<br>
 										<blockquote>
 											In the above examples, the same logic applies to both<br>
-											<span class="path-to">/public/view/partial/footer.php</span><br>
+											<span class="path-to">/view/partial/footer.php</span><br>
 											and<br>
-											<span class="path-to">/public/view/Dashboard/partial/footer.php</span>
+											<span class="path-to">/view/Dashboard/partial/footer.php</span>
 										</blockquote>
 									</div>
 								</div>
@@ -1523,10 +1461,10 @@
 											<b>Views:</b>
 
 											<ul>
-												<li><span class="path-to">/public/view/partial/header.php</span> <- default header</li>
-												<li><span class="path-to">/public/view/partial/footer.php</span> <- default footer</li>
-												<li><span class="path-to">/public/view/Dashboard/partial/sub_header.php</span> <- dashboard sub header</li>
-												<li><span class="path-to">/public/view/Dashboard/partial/sub_footer.php</span> <- dashboard sub footer</li>
+												<li><span class="path-to">/view/partial/header.php</span> <- default header</li>
+												<li><span class="path-to">/view/partial/footer.php</span> <- default footer</li>
+												<li><span class="path-to">/view/Dashboard/partial/sub_header.php</span> <- dashboard sub header</li>
+												<li><span class="path-to">/view/Dashboard/partial/sub_footer.php</span> <- dashboard sub footer</li>
 											</ul>
 
 											<br><br>
@@ -1537,11 +1475,11 @@
 
 											<ol>
 												<li><span class="path-to">/controller/Dashboard.php</span> would load and call the <b>index()</b> method</li>
-												<li><span class="path-to">/public/view/partial/header.php</span> would load.</li>
-												<li><span class="path-to">/public/view/Dashboard/partial/sub_header.php</span> would load.</li>
-												<li><span class="path-to">/public/view/Dashboard/index.php</span> would load.</li>
-												<li><span class="path-to">/public/view/Dashboard/partial/sub_footer.php</span> would load.</li>
-												<li><span class="path-to">/public/view/partial/footer.php</span> would load.</li>
+												<li><span class="path-to">/view/partial/header.php</span> would load.</li>
+												<li><span class="path-to">/view/Dashboard/partial/sub_header.php</span> would load.</li>
+												<li><span class="path-to">/view/Dashboard/index.php</span> would load.</li>
+												<li><span class="path-to">/view/Dashboard/partial/sub_footer.php</span> would load.</li>
+												<li><span class="path-to">/view/partial/footer.php</span> would load.</li>
 											</ol>
 
 										</section>
@@ -1584,12 +1522,12 @@
 											<b>Views:</b>
 
 											<ul>
-												<li><span class="path-to">/public/view/partial/header.php</span> <- default header</li>
-												<li><span class="path-to">/public/view/partial/footer.php</span> <- default footer</li>
-												<li><span class="path-to">/public/view/Dashboard/partial/sub_header.php</span> <- dashboard sub header</li>
-												<li><span class="path-to">/public/view/Dashboard/partial/sub_footer.php</span> <- dashboard sub footer</li>
-												<li><span class="path-to">/public/view/Dashboard/Events/partial/sub_header.php</span> <- events sub header</li>
-												<li><span class="path-to">/public/view/Dashboard/Events/partial/sub_footer.php</span> <- events sub footer</li>
+												<li><span class="path-to">/view/partial/header.php</span> <- default header</li>
+												<li><span class="path-to">/view/partial/footer.php</span> <- default footer</li>
+												<li><span class="path-to">/view/Dashboard/partial/sub_header.php</span> <- dashboard sub header</li>
+												<li><span class="path-to">/view/Dashboard/partial/sub_footer.php</span> <- dashboard sub footer</li>
+												<li><span class="path-to">/view/Dashboard/Events/partial/sub_header.php</span> <- events sub header</li>
+												<li><span class="path-to">/view/Dashboard/Events/partial/sub_footer.php</span> <- events sub footer</li>
 											</ul>
 
 											<br>
@@ -1600,13 +1538,13 @@
 
 											<ol>
 												<li><span class="path-to">/controller/Dashboard/Events.php</span> would load and call the <b>index()</b> method</li>
-												<li><span class="path-to">/public/view/partial/header.php</span> would load.</li>
-												<li><span class="path-to">/public/view/Dashboard/partial/sub_header.php</span> would load.</li>
-												<li><span class="path-to">/public/view/Dashboard/Events/partial/sub_header.php</span> would load.</li>
-												<li><span class="path-to">/public/view/Dashboard/Events/index.php</span> would load.</li>
-												<li><span class="path-to">/public/view/Dashboard/Events/partial/sub_footer.php</span> would load.</li>
-												<li><span class="path-to">/public/view/Dashboard/partial/sub_footer.php</span> would load.</li>
-												<li><span class="path-to">/public/view/partial/footer.php</span> would load.</li>
+												<li><span class="path-to">/view/partial/header.php</span> would load.</li>
+												<li><span class="path-to">/view/Dashboard/partial/sub_header.php</span> would load.</li>
+												<li><span class="path-to">/view/Dashboard/Events/partial/sub_header.php</span> would load.</li>
+												<li><span class="path-to">/view/Dashboard/Events/index.php</span> would load.</li>
+												<li><span class="path-to">/view/Dashboard/Events/partial/sub_footer.php</span> would load.</li>
+												<li><span class="path-to">/view/Dashboard/partial/sub_footer.php</span> would load.</li>
+												<li><span class="path-to">/view/partial/footer.php</span> would load.</li>
 											</ol>
 
 										</section>
@@ -1651,8 +1589,8 @@
 										<b>Views: </b>
 
 										<ul>
-											<li><span class="path-to">/public/view/Dashboard/notifications.php</span></li>
-											<li><span class="path-to">/public/view/Dashboard/partial/latest_notifications.php</span></li>
+											<li><span class="path-to">/view/Dashboard/notifications.php</span></li>
+											<li><span class="path-to">/view/Dashboard/partial/latest_notifications.php</span></li>
 										</ul>
 
 										</section>
@@ -1669,7 +1607,7 @@
 											
 											<div class="pre-wrapper">
 												<div class="pre-header">
-													<span class="path-to">/public/view/Dashboard/notifications.php</span>
+													<span class="path-to">/view/Dashboard/notifications.php</span>
 												</div>
 																				
 <pre><code>&lt;p&gt;some content&lt;/p&gt;
@@ -1686,7 +1624,7 @@
 											<div class="col-md-10">
 											<div class="pre-wrapper">
 												<div class="pre-header">
-													<span class="path-to">/public/view/Dashboard/partial/latest_notifications.php</span>
+													<span class="path-to">/view/Dashboard/partial/latest_notifications.php</span>
 												</div>
 
 																				
@@ -1737,21 +1675,21 @@
 
 										<b>Views</b>
 										<ul>
-											<li><span class="path-to">/public/view/Dashboard/index.php</span></li>
-											<li><span class="path-to">/public/view/Dashboard/users.php</span></li>
-											<li><span class="path-to">/public/view/Dashboard/Notifications/index.php</span></li>
-											<li><span class="path-to">/public/view/Dashboard/Notifications/latest.php</span></li>
+											<li><span class="path-to">/view/Dashboard/index.php</span></li>
+											<li><span class="path-to">/view/Dashboard/users.php</span></li>
+											<li><span class="path-to">/view/Dashboard/Notifications/index.php</span></li>
+											<li><span class="path-to">/view/Dashboard/Notifications/latest.php</span></li>
 										</ul>
 
 										<b>CSS</b>
 
 										<ul>
-											<li><span class="path-to">/public/view/Dashboard/css/Dashboard.css</span></li>
-											<li><span class="path-to">/public/view/Dashboard/css/index.css</span></li>
-											<li><span class="path-to">/public/view/Dashboard/css/users.css</span></li>
-											<li><span class="path-to">/public/view/Dashboard/Notifications/css/Notifications.css</span></li>
-											<li><span class="path-to">/public/view/Dashboard/Notifications/css/index.css</span></li>
-											<li><span class="path-to">/public/view/Dashboard/Notifications/css/latest.css</span></li>
+											<li><span class="path-to">/view/Dashboard/css/Dashboard.css</span></li>
+											<li><span class="path-to">/view/Dashboard/css/index.css</span></li>
+											<li><span class="path-to">/view/Dashboard/css/users.css</span></li>
+											<li><span class="path-to">/view/Dashboard/Notifications/css/Notifications.css</span></li>
+											<li><span class="path-to">/view/Dashboard/Notifications/css/index.css</span></li>
+											<li><span class="path-to">/view/Dashboard/Notifications/css/latest.css</span></li>
 										</ul>
 
 										<br>
@@ -1767,31 +1705,31 @@
 													<tr>
 														<td>www.example.com/Dashboard</td>
 														<td>
-															<span class="path-to">/public/view/Dashboard/css/Dashboard.css</span><br>
-															<span class="path-to">/public/view/Dashboard/css/index.css</span><br>
+															<span class="path-to">/view/Dashboard/css/Dashboard.css</span><br>
+															<span class="path-to">/view/Dashboard/css/index.css</span><br>
 														</td>
 													</tr>
 													<tr>
 														<td>www.example.com/Dashboard/users</td>
 														<td>
-															<span class="path-to">/public/view/Dashboard/css/Dashboard.css</span><br>
-															<span class="path-to">/public/view/Dashboard/css/users.css</span><br>
+															<span class="path-to">/view/Dashboard/css/Dashboard.css</span><br>
+															<span class="path-to">/view/Dashboard/css/users.css</span><br>
 														</td>
 													</tr>
 													<tr>
 														<td>www.example.com/Dashboard/Notifications</td>
 														<td>
-															<span class="path-to">/public/view/Dashboard/css/Dashboard.css</span><br>
-															<span class="path-to">/public/view/Dashboard/Notifications/css/Notifications.css</span><br>
-															<span class="path-to">/public/view/Dashboard/Notifications/css/index.css</span><br>
+															<span class="path-to">/view/Dashboard/css/Dashboard.css</span><br>
+															<span class="path-to">/view/Dashboard/Notifications/css/Notifications.css</span><br>
+															<span class="path-to">/view/Dashboard/Notifications/css/index.css</span><br>
 														</td>
 													</tr>
 													<tr>
 														<td>www.example.com/Dashboard/Notifications/latest</td>
 														<td>
-															<span class="path-to">/public/view/Dashboard/css/Dashboard.css</span><br>
-															<span class="path-to">/public/view/Dashboard/Notifications/css/Notifications.css</span><br>
-															<span class="path-to">/public/view/Dashboard/Notifications/css/latest.css</span><br>
+															<span class="path-to">/view/Dashboard/css/Dashboard.css</span><br>
+															<span class="path-to">/view/Dashboard/Notifications/css/Notifications.css</span><br>
+															<span class="path-to">/view/Dashboard/Notifications/css/latest.css</span><br>
 														</td>
 													</tr>
 												</tbody>
@@ -1820,21 +1758,21 @@
 
 										<b>Views</b>
 										<ul>
-											<li><span class="path-to">/public/view/Dashboard/index.php</span></li>
-											<li><span class="path-to">/public/view/Dashboard/users.php</span></li>
-											<li><span class="path-to">/public/view/Dashboard/Notifications/index.php</span></li>
-											<li><span class="path-to">/public/view/Dashboard/Notifications/latest.php</span></li>
+											<li><span class="path-to">/view/Dashboard/index.php</span></li>
+											<li><span class="path-to">/view/Dashboard/users.php</span></li>
+											<li><span class="path-to">/view/Dashboard/Notifications/index.php</span></li>
+											<li><span class="path-to">/view/Dashboard/Notifications/latest.php</span></li>
 										</ul>
 
 										<b>CSS</b>
 
 										<ul>
-											<li><span class="path-to">/public/view/Dashboard/js/Dashboard.js</span></li>
-											<li><span class="path-to">/public/view/Dashboard/js/index.js</span></li>
-											<li><span class="path-to">/public/view/Dashboard/js/users.js</span></li>
-											<li><span class="path-to">/public/view/Dashboard/Notifications/js/Notifications.js</span></li>
-											<li><span class="path-to">/public/view/Dashboard/Notifications/js/index.js</span></li>
-											<li><span class="path-to">/public/view/Dashboard/Notifications/js/latest.js</span></li>
+											<li><span class="path-to">/view/Dashboard/js/Dashboard.js</span></li>
+											<li><span class="path-to">/view/Dashboard/js/index.js</span></li>
+											<li><span class="path-to">/view/Dashboard/js/users.js</span></li>
+											<li><span class="path-to">/view/Dashboard/Notifications/js/Notifications.js</span></li>
+											<li><span class="path-to">/view/Dashboard/Notifications/js/index.js</span></li>
+											<li><span class="path-to">/view/Dashboard/Notifications/js/latest.js</span></li>
 										</ul>
 
 										<br>
@@ -1850,31 +1788,31 @@
 													<tr>
 														<td>www.example.com/Dashboard</td>
 														<td>
-															<span class="path-to">/public/view/Dashboard/js/Dashboard.js</span><br>
-															<span class="path-to">/public/view/Dashboard/js/index.js</span><br>
+															<span class="path-to">/view/Dashboard/js/Dashboard.js</span><br>
+															<span class="path-to">/view/Dashboard/js/index.js</span><br>
 														</td>
 													</tr>
 													<tr>
 														<td>www.example.com/Dashboard/users</td>
 														<td>
-															<span class="path-to">/public/view/Dashboard/js/Dashboard.js</span><br>
-															<span class="path-to">/public/view/Dashboard/js/users.js</span><br>
+															<span class="path-to">/view/Dashboard/js/Dashboard.js</span><br>
+															<span class="path-to">/view/Dashboard/js/users.js</span><br>
 														</td>
 													</tr>
 													<tr>
 														<td>www.example.com/Dashboard/Notifications</td>
 														<td>
-															<span class="path-to">/public/view/Dashboard/js/Dashboard.js</span><br>
-															<span class="path-to">/public/view/Dashboard/Notifications/js/Notifications.js</span><br>
-															<span class="path-to">/public/view/Dashboard/Notifications/js/index.js</span><br>
+															<span class="path-to">/view/Dashboard/js/Dashboard.js</span><br>
+															<span class="path-to">/view/Dashboard/Notifications/js/Notifications.js</span><br>
+															<span class="path-to">/view/Dashboard/Notifications/js/index.js</span><br>
 														</td>
 													</tr>
 													<tr>
 														<td>www.example.com/Dashboard/Notifications/latest</td>
 														<td>
-															<span class="path-to">/public/view/Dashboard/js/Dashboard.js</span><br>
-															<span class="path-to">/public/view/Dashboard/Notifications/js/Notifications.js</span><br>
-															<span class="path-to">/public/view/Dashboard/Notifications/js/latest.js</span><br>
+															<span class="path-to">/view/Dashboard/js/Dashboard.js</span><br>
+															<span class="path-to">/view/Dashboard/Notifications/js/Notifications.js</span><br>
+															<span class="path-to">/view/Dashboard/Notifications/js/latest.js</span><br>
 														</td>
 													</tr>
 												</tbody>
@@ -1900,7 +1838,7 @@
 								<div class="col-md-10 col-md-offset-2">
 									<ul>
 										<li>
-											<span class="path-to">/public/view/Dashboard</span>
+											<span class="path-to">/view/Dashboard</span>
 											<ul>
 												<li>
 													css
@@ -2183,11 +2121,11 @@
 												The following files exist.
 												<ul>
 													<li><span class="path-to">/controller/Dashboard.php</span></li>
-													<li><span class="path-to">/public/view/Dashboard/users.php</span></li>
-													<li><span class="path-to">/public/view/Dashboard/css/Dashboard.css</span></li>
-													<li><span class="path-to">/public/view/Dashboard/css/users.css</span></li>
-													<li><span class="path-to">/public/view/Dashboard/css/Dashboard.js</span></li>
-													<li><span class="path-to">/public/view/Dashboard/css/users.js</span></li>
+													<li><span class="path-to">/view/Dashboard/users.php</span></li>
+													<li><span class="path-to">/view/Dashboard/css/Dashboard.css</span></li>
+													<li><span class="path-to">/view/Dashboard/css/users.css</span></li>
+													<li><span class="path-to">/view/Dashboard/css/Dashboard.js</span></li>
+													<li><span class="path-to">/view/Dashboard/css/users.js</span></li>
 												</ul>
 											</li>
 										</ul>
@@ -2199,16 +2137,16 @@
 											<ol>
 												<li><span class="path-to">/controller/Dashboard.php</span> will load and a new Dashboard class will be instantiated.</li>
 												<li>The users() method of the Dashboard class will be executed.</li>
-												<li><span class="path-to">/public/view/partial/header.php</span> will be loaded.</li>
-												<li><span class="path-to">/public/view/Dashboard/users.php</span> will be loaded.</li>
-												<li><span class="path-to">/public/view/partial/footer.php</span> will be loaded.</li>
+												<li><span class="path-to">/view/partial/header.php</span> will be loaded.</li>
+												<li><span class="path-to">/view/Dashboard/users.php</span> will be loaded.</li>
+												<li><span class="path-to">/view/partial/footer.php</span> will be loaded.</li>
 											</ol>
 										</p>
 
 										<br><br>
 
 										<p>
-											When <span class="path-to">/public/view/partial/header.php</span> is loaded if it has &lt;? View::auto_header(); ?&gt; in the &lt;head&gt; section, it will try to render: 
+											When <span class="path-to">/view/partial/header.php</span> is loaded if it has &lt;? View::auto_header(); ?&gt; in the &lt;head&gt; section, it will try to render: 
 
 											<ul>
 												<li>&lt;link rel="stylesheet" type="text/css" href="/view/Dashboard/css/Dashboard.css"&gt;</li>
@@ -2290,8 +2228,8 @@
 											<b>Views: </b>
 
 											<ul>
-												<li><span class="path-to">/public/view/Dashboard/notifications.php</span></li>
-												<li><span class="path-to">/public/view/Dashboard/partial/latest_notifications.php</span></li>
+												<li><span class="path-to">/view/Dashboard/notifications.php</span></li>
+												<li><span class="path-to">/view/Dashboard/partial/latest_notifications.php</span></li>
 											</ul>
 
 											</section>
@@ -2305,7 +2243,7 @@
 													<b>Example:</b>
 												</div>
 												<div class="col-md-10">
-												<p><span class="path-to">/public/view/Dashboard/notifications.php</span></p>										
+												<p><span class="path-to">/view/Dashboard/notifications.php</span></p>										
 <pre><code>&lt;p&gt;some content&lt;/p&gt;
 &lt;? $this->pass_var = 'pass this var'; ?&gt;
 &lt;? View::partial('latest_notifications') ?&gt;</code></pre>
@@ -2317,7 +2255,7 @@
 													<b>Example:</b>
 												</div>
 												<div class="col-md-10">
-												<p><span class="path-to">/public/view/Dashboard/partial/latest_notifications.php</span></p>										
+												<p><span class="path-to">/view/Dashboard/partial/latest_notifications.php</span></p>										
 <pre><code>&lt;p&gt;some content loaded from partial&lt;/p&gt;
 &lt;p&gt;&lt;?= $this->pass_var; ?&gt;&lt;/p&gt;</code></pre>
 												</div>
@@ -2365,8 +2303,8 @@
 												<b>Views:</b>
 
 												<ul>
-													<li><span class="path-to">/public/view/Dashboard/Admin/partial/users/basic_info.php</span></li>
-													<li><span class="path-to">/public/view/Users/index.php</span></li>
+													<li><span class="path-to">/view/Dashboard/Admin/partial/users/basic_info.php</span></li>
+													<li><span class="path-to">/view/Users/index.php</span></li>
 												</ul>
 											</section>
 										</div>
@@ -2378,7 +2316,7 @@
 											<b>Example:</b>
 										</div>
 										<div class="col-md-10">
-											<p><span class="path-to">/public/view/Users/index.php</span></p>
+											<p><span class="path-to">/view/Users/index.php</span></p>
 <pre><code>&lt;p&gt;Some view stuff&lt;p&gt;
 &lt;p&gt;&lt;? View::partial('users/basic_info', 'Dashboard/Admin'); ?&gt;&lt;p&gt;
 </code></pre>
@@ -2391,7 +2329,7 @@
 											<b>Example:</b>
 										</div>
 										<div class="col-md-10">
-											<p><span class="path-to">/public/view/Dashboard/Admin/partial/users/basic_info.php</span></p>
+											<p><span class="path-to">/view/Dashboard/Admin/partial/users/basic_info.php</span></p>
 <pre><code>&lt;p&gt;basic info&lt;p&gt;</code></pre>
 										</div>
 									</div>

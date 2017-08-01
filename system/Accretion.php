@@ -23,6 +23,7 @@
 
                 //DEFINE THE CLASSES TO LOAD
                 $classes = [
+                    'Functions',
                     'global/Global_Functions', 
                     'Session', 
                     'Request', 
@@ -52,7 +53,7 @@
         public function route(){
             
             //GET THE CONTROLLER
-            \Controller::get();
+            $res = \Controller::get();
 
             //SEND BACK THE ACCRETION OBJECT
             return $this;

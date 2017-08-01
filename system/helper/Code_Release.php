@@ -1165,7 +1165,7 @@
 			?>
 					</div>
 					</div>
-					<div class="center" id="main-footer"></div>
+					<div class="center" id="main-footer">Created by i-Tul Design &amp; Software 2015.</div>
 				</div>
 				</body>
 				</html>
