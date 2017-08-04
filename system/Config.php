@@ -42,7 +42,7 @@
 				else{
 					$found = false;
 					foreach($script_parts as $part){
-						if(!$found){
+						if(!$found){							
 							if($part == $uri_parts[0]){
 								$found = true;
 							}
@@ -57,12 +57,9 @@
 				}
 
 				$web_app = '/'.implode('/', array_values(array_filter(explode('/', $web_app)))).'/';
-
 				$web_app = $web_app == '//' ? '/' : $web_app;
 
 				define('WEB_APP', $web_app);
-				//define('WEB_APP', '/'.basename(dirname($_SERVER['SCRIPT_NAME'])).'/');	
-				//define('WEB_APP', str_replace('//', '/', dirname($_SERVER['SCRIPT_NAME']).'/'));
 			}
 			else{
 				define('WEB_APP', '/');
@@ -81,6 +78,12 @@
 			//PARSE THE SETTINGS BASED ON THE CURRENT SERVER
 			Config::$data = Config::parse_server_settings();
 
+			//TEST THE DB CONNECTIONS
+			Config::test_db_connections();
+
+			//SANITIZE GET AND POST DATA
+			Config::sanitize_data();
+
 			//GET THE COMPOSER AUTOLOAD
 			if(file_exists(VENDOR_PATH.'autoload.php'))	require_once VENDOR_PATH.'autoload.php';
 
@@ -95,6 +98,18 @@
 
 			//SEND BACK THE CONFIG DATA
 			return Config::$data;
+		}
+
+		//SANITIZE GET AND POST DATA
+		public static function sanitize_data(){
+
+			//$_GET   = filter_input_array(INPUT_GET, FILTER_SANITIZE_STRING);
+			//$_POST  = filter_input_array(INPUT_POST, FILTER_SANITIZE_STRING);
+
+			if(\DB::can_connect()){
+				$_POST 	= DB::escape($_POST, false);
+				$_GET 	= DB::escape($_GET, false);
+			}
 		}
 
 		//LOAD THE SERVER CONFIG DATA AND GENERATE THE JSON IF NEEDED
@@ -212,6 +227,17 @@
 			}
 
 			return 'prod';
+		}
+
+		public static function test_db_connections(){
+
+			$dbs = Config::get('database');			
+
+			foreach($dbs as $alias => $credentials){
+				$dbs->$alias->can_connect = \DB::test_connection($credentials->host, $credentials->user, $credentials->password, $credentials->database);
+			}
+
+			Config::$data->database = $dbs;
 		}
 
 		public static function parse_server_settings($data = null, $last_key = null){

@@ -19,7 +19,7 @@
 			}
 
 			$headers 		= (\Request::is_ajax() && (!\Request::get('header') || \Request::get('header') !== 'true')) ? false : $headers;
-			$sub_header 	= (isset($this->_disable_subheader) && $this->_disable_subheader === true) ? false : $sub_header;
+			$sub_header 	= (isset(Accretion::$controller->_disable_subheader) && Accretion::$controller->_disable_subheader === true) ? false : $sub_header;
 			$template_path 	= $controller === false ? \Accretion::$template_path : VIEW_PATH.$controller.'/';
 			$template 		= !$template ? \Accretion::$template_name : $template;
 			$file_path 		= str_replace('//', '/', $template_path.'/'.$template.'.php');			
@@ -29,7 +29,9 @@
 			if($sub_header) \View::sub_header();
 			
 			//LOAD THE VIEW IF IT EXISTS
-			if(file_exists($file_path)) include $file_path;
+			if(file_exists($file_path)){
+				\Accretion::$controller->load_file($file_path);
+			} 
 
 			//LOAD TEMPLATE JAVASCRIPT IF LOADED BY AJAX
 			if(\Request::is_ajax()){
@@ -44,28 +46,26 @@
 			if($headers) \View::footer();
 
 			//TURN OFF DISABLE SUBHEADER AFTER RUN
-			$this->_disable_subheader = false;
+			\Accretion::$controller->_disable_subheader = false;
 		}
 
 		public function include_path($paths, $break = true){
 			foreach($paths as $path){
-				include $path;
-				if($break){
-					break;
-				}				
+				\Accretion::$controller->load_file($path);
+				if($break) break;	
 			}
 		}
 
 		public function page_title(){
 			
-			if(isset($this->page_title)){
-				return $this->page_title;
+			if(isset(Accretion::$controller->page_title)){
+				return Accretion::$controller->page_title;
 			}
 			else{
 
 				$res = end(explode('\\', ucwords(trim(str_replace('_', ' ', Accretion::$controller_name)))));				
 
-				if(Accretion::$method_name !== 'index'){
+				if(\Accretion::$method_name !== 'index'){
 					$res .= ' | '.ucwords(trim(str_replace('_', ' ', Accretion::$method_name)));
 				}
 
@@ -75,19 +75,19 @@
 
 		//LOAD THE TEMPLATE HEADER
 		public function header(){
-			if(View::include_header()) View::include_path(View::build_search_paths('header.php', 'partial'));			
+			if(\View::include_header()) View::include_path(View::build_search_paths('header.php', 'partial'));			
 		}
 
 		//LOAD THE TEMPLATE FOOTER
 		public function footer(){
-			if(View::include_header()) View::include_path(View::build_search_paths('footer.php', 'partial'));
+			if(\View::include_header()) View::include_path(View::build_search_paths('footer.php', 'partial'));
 		}
 
 		//LOAD THE SUB HEADER
 		public function sub_header(){
-			if(View::include_header()){			
-				$paths = View::build_search_paths(Accretion::$template_name.'_sub_header.php', 'partial');
-				View::include_path(array_reverse(empty($paths) ? View::build_search_paths('sub_header.php', 'partial') : $paths), false);
+			if(\View::include_header()){			
+				$paths = View::build_search_paths(\Accretion::$template_name.'_sub_header.php', 'partial');
+				\View::include_path(array_reverse(empty($paths) ? View::build_search_paths('sub_header.php', 'partial') : $paths), false);
 			}
 		}
 
@@ -370,11 +370,6 @@
 
 			//RESET THE METHOD
 			Accretion::$method_name = $method_name;
-		}
-
-		//DEFUNCT METHOD (SHOULD USE VIEW::partial())
-		public function load_partial($name, $controller = false, $method = false){
-			View::partial($name, $controller, $method);
 		}
 	}
 ?>

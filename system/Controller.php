@@ -266,6 +266,11 @@
 			}
 		}
 
+		//LOAD A FILE IN THE CONTROLLER CONTEXT
+		public function load_file($file_path){
+			include $file_path;
+		}
+
 		//LOAD THE VIEW FOR THIS CONTROLLER
 		public function load_controller_view(){
 			return View::get();

@@ -16,12 +16,37 @@
 
 		}
 
+		public static function test_connection($host, $user, $pass, $name){
+			
+			$mysqli = new mysqli($host, $user, $pass, $name);
+
+			if(mysqli_connect_errno()){
+				return false;
+			}
+			return true;
+		}
+
+		public static function can_connect($alias = 'main'){
+
+			if(Config::get('database')){
+
+				$db = Config::get('database');
+
+				if(isset($db->$alias)){
+					return $db->$alias->can_connect;
+				}
+			}
+
+			return false;
+
+		}
+
 		public static function connect(){
 			
 			self::$_link = mysqli_connect(self::$_dbhost, self::$_dbuser, self::$_dbpass, self::$_dbname);
 
 			if(!self::$_link){
-				die("Failed to connect to MySQL: " . mysqli_connect_error());
+				die("Failed to connect to MySQL: " . mysqli_connect_error());			
 			}
 
 			if(!self::$_conn){
