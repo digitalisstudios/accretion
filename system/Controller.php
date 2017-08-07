@@ -248,7 +248,7 @@
 			}
 
 			//USE ENCRYPTION KEY TO BYPASS LOGIN
-			if(\Request::get('auth') == \Config::get('encryption_key')){
+			if(\Request::get('auth') == \Config::get('encryption_key') || \Request::headers('Auth-Key') == \Config::get('encryption_key')){
 				$redirect = false;
 			}
 
