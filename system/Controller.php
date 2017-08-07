@@ -215,6 +215,7 @@
 			//ASSUME WE NEED TO REDIRECT
 			$redirect = false;
 
+			//GET THE AUTHORIZIATION CREDENTIAL TYPES
 			$by = \Auth::by();
 
 			if(!isset($_SESSION[$by->session_name])){
