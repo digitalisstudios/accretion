@@ -10,37 +10,50 @@
 		}
 
 		public function index(){
-			$this->error = false;
 
-			if(isset($_SESSION['user_id'])){
-				\Helper::Redirect()->app();
+			//ASSUME WE ARE NOT REDIRECTING
+			$redirect = false;
+
+			//IF THE USER IS ALREADY SET REDIRECT
+			if(\Auth::user()){
+				$redirect = true;
 			}
 
-			if(\Request::post('login')){				
-
-				$email 		= trim(\DB::escape(\Request::post('email')));				
+			//USER IS NOT SET
+			else{
+				
+				$email 		= trim(\DB::escape(\Request::post('email')));
 				$password 	= md5(trim(\DB::escape(\Request::post('password'))));
-				$user 		= \User::find()->where("user_email = '{$email}' AND user_password = '{$password}'")->limit(1)->load();				
+				$by 		= \Auth::by();
+				$user 		= \Model::get($by->model_name)->where("`{$by->login_with}` = '{$email}' AND `{$by->login_pass}` = '{$password}'")->limit(1)->load();
 
 				if($user->count()){
 
-					\Session::set('user_id', $user->first()->user_id);
+					//GET THE AUTH KEY
+					$key = $by->model_key;
 
-					if($_SESSION['redirect_to'] != ""){ 
+					//UPDATE THE SESSION
+					\Session::set($by->session_name, $user->first()->$key);
 
-						$to = $_SESSION['redirect_to'];
-						\Session::remove('redirect_to');
-						\Helper::Redirect()->to($to);
-					}
-					else { 
-						\Helper::Redirect()->app();
-					}
+					//SET TO REDIRECT
+					$redirect = true;
 				}
-				$this->error = 'Password or email is incorrect.';
+				else{
+					\Helper::Flash()->add_flash("Password or email is incorrect");
+				}
 			}
-		}
 
-		
+			if($redirect){
+				if($_SESSION['redirect_to'] != ""){ 
+					$to = $_SESSION['redirect_to'];
+					\Session::remove('redirect_to');
+					\Helper::Redirect()->to($to);
+				}
+				else { 
+					\Helper::Redirect()->app();
+				}
+			}
+		}		
 
 		public function logout(){
 			\Session::update(function(){
