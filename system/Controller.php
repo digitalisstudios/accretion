@@ -215,13 +215,15 @@
 			//ASSUME WE NEED TO REDIRECT
 			$redirect = false;
 
-			if(!isset($_SESSION['contact'])){
+			$by = \Auth::by();
+
+			if(!isset($_SESSION[$by->session_name])){
 				$redirect = true;
 			}
 			else{
 
 				//GET THE USER DATA
-				$user = $_SESSION['contact'];
+				$user = $_SESSION[$by->session_name];
 
 				//CHECK IF THE VARIABLE NAME MATHES THE VALUE
 				if(!is_null($var) && !is_null($value)){
@@ -239,14 +241,14 @@
 
 				//CHECK FOR USER ID
 				elseif(is_null($var)){
-					if(!isset($user['contact_id'])){
+					if(!isset($user[$by->login_with])){
 						$redirect = true;
 					}
 				}
 			}
 
 			//USE ENCRYPTION KEY TO BYPASS LOGIN
-			if(Request::get('auth') == Config::get('encryption_key')){
+			if(\Request::get('auth') == \Config::get('encryption_key')){
 				$redirect = false;
 			}
 
@@ -254,14 +256,14 @@
 			if($redirect){
 
 				//SET THE SESSION REDIRECT TO VAR
-				Session::update(function(){
+				\Session::update(function(){
 					if(isset($_SERVER['REQUEST_URI']) && !isset($_SESSION['redirect_to'])){
 						$_SESSION['redirect_to'] = $_SERVER['REQUEST_URI'];
 					}
 				});
 
 				//REDIRECT THE USER
-				Helper::Redirect(WEB_APP.'Login');
+				\Helper::Redirect(WEB_APP.'Login');
 
 			}
 		}
