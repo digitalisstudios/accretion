@@ -16,7 +16,7 @@
 
 			//IF THE USER IS ALREADY SET REDIRECT
 			if(\Auth::user()){
-				$redirect = true;
+				//$redirect = true;
 			}
 
 			//USER IS NOT SET
@@ -25,17 +25,14 @@
 				if(\Request::post('login')){
 
 					$email 		= trim(\DB::escape(\Request::post('email')));
-					$password 	= md5(trim(\DB::escape(\Request::post('password'))));
+					$password 	= \Helper::Encryption()->encrypt(trim(\DB::escape(\Request::post('password'))));
 					$by 		= \Auth::by();
-					$user 		= \Model::get($by->model_name)->where("`{$by->login_with}` = '{$email}' AND `{$by->login_pass}` = '{$password}'")->limit(1)->load();
+					$user 		= \Model::get($by->model_name)->where("`{$by->login_with}` = '{$email}' AND `{$by->login_pass}` = '{$password}'")->limit(1)->load();					
 
 					if($user->count()){
 
-						//GET THE AUTH KEY
-						$key = $by->model_key;
-
 						//UPDATE THE SESSION
-						\Session::set($by->session_name, $user->first()->$key);
+						\Session::set($by->session_name, $user->first()->expose_data());
 
 						//SET TO REDIRECT
 						$redirect = true;
