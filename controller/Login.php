@@ -16,7 +16,7 @@
 
 			//IF THE USER IS ALREADY SET REDIRECT
 			if(\Auth::user()){
-				//$redirect = true;
+				$redirect = true;
 			}
 
 			//USER IS NOT SET
@@ -60,8 +60,6 @@
 				session_destroy();
 				\Helper::Redirect()->app();
 			});
-		}
-
-		
+		}		
 	}
 ?>
