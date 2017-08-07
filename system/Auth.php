@@ -48,31 +48,29 @@
 		 * @return mixed false when user is not logged in or a User Model when they are
 		 */
 		public static function user(){
+			
+			//IF THE USER EXISTS RETURN THE USER
 			if(Auth::$user){
 				return Auth::$user;
 			}
+
+			//USER DOES NOT EXITS
 			else{
 
-				//DEFAULTS
-				$model_name 	= 'User';
-				$session_name 	= 'user';
-				$model_key 		= 'user_id';
+				//GET THE CREDENTIAL CONFIG
+				$by = \Auth::by();
 
-				if(\Config::get('Auth')){
-					$a = \Config::get('Auth');
-					if(isset($a->model_name)){
-						$model_name = $a->model_name;
-					}
-					if(isset($a->session_name)){
-						$session_name = $a->session_name;
-					}
-					if(isset($a->model_key)){
-						$model_key = $a->model_key;
-					}
-				}
+				//IF THE SESSION AND THE MODEL EXIST
+				if(isset($_SESSION[$by->session_name][$by->model_key])){
 
-				if(isset($_SESSION[$session_name][$model_key])){
-					Auth::$user = Model::get($model_name)->load($_SESSION[$session_name][$model_key]);					
+					$model = \Model::get($by->model_name);
+
+					if($model){
+						Auth::$user = $model->load($_SESSION[$by->session_name][$by->model_key]);
+					}
+					else{
+						Auth::$user = $_SESSION[$by->session_name];
+					}		
 					return Auth::$user;
 				}
 			}
@@ -80,14 +78,23 @@
 		}
 
 		/**
-		 * Users Method
+		 * by Method
 		 *
-		 * This method loads all of the users that are not deleted
+		 * This method determines how to authorize user credentials
 		 *
-		 * @return object ORM_Wrapper with all of the current active users
+		 * @return object stdClass containing the way to authorize a user
 		 */
-		public static function users(){
-			return Model::get('User')->where("user_delete = 'false'")->order_by("user_fname ASC")->wrap(true)->load();
+		public static function by(){
+
+			$res 				= new stdClass;
+			$auth 				= \Config::get('Auth');
+			$res->model_name 	= isset($auth->model_name) 		? $auth->model_name 	: 'User';
+			$res->session_name 	= isset($auth->session_name) 	? $auth->session_name 	: 'user';
+			$res->model_key 	= isset($auth->model_key) 		? $auth->model_key 		: 'user_id';
+			$res->login_with 	= isset($auth->login_with) 		? $auth->login_with 	: 'user_email';
+			$res->login_pass 	= isset($auth->login_pass) 		? $auth->login_pass 	: 'user_password';
+
+			return $res;
 		}
 	}
 ?>

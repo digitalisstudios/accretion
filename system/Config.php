@@ -34,7 +34,7 @@
 
 				$parts 			= array();
 				$script_parts 	= array_values(array_filter(explode('/', dirname($_SERVER['SCRIPT_NAME']))));
-				$uri_parts 		= array_values(array_filter(explode('/', dirname($_SERVER['REQUEST_URI']))));
+				$uri_parts 		= array_values(array_filter(explode('/', $_SERVER['REQUEST_URI'])));
 
 				if(empty($uri_parts)){
 					$web_app = '/';
@@ -81,9 +81,6 @@
 			//TEST THE DB CONNECTIONS
 			Config::test_db_connections();
 
-			//SANITIZE GET AND POST DATA
-			Config::sanitize_data();
-
 			//GET THE COMPOSER AUTOLOAD
 			if(file_exists(VENDOR_PATH.'autoload.php'))	require_once VENDOR_PATH.'autoload.php';
 
@@ -98,18 +95,6 @@
 
 			//SEND BACK THE CONFIG DATA
 			return Config::$data;
-		}
-
-		//SANITIZE GET AND POST DATA
-		public static function sanitize_data(){
-
-			//$_GET   = filter_input_array(INPUT_GET, FILTER_SANITIZE_STRING);
-			//$_POST  = filter_input_array(INPUT_POST, FILTER_SANITIZE_STRING);
-
-			if(\DB::can_connect()){
-				$_POST 	= DB::escape($_POST, false);
-				$_GET 	= DB::escape($_GET, false);
-			}
 		}
 
 		//LOAD THE SERVER CONFIG DATA AND GENERATE THE JSON IF NEEDED
