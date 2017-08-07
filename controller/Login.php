@@ -21,25 +21,28 @@
 
 			//USER IS NOT SET
 			else{
-				
-				$email 		= trim(\DB::escape(\Request::post('email')));
-				$password 	= md5(trim(\DB::escape(\Request::post('password'))));
-				$by 		= \Auth::by();
-				$user 		= \Model::get($by->model_name)->where("`{$by->login_with}` = '{$email}' AND `{$by->login_pass}` = '{$password}'")->limit(1)->load();
 
-				if($user->count()){
+				if(\Request::post('login')){
 
-					//GET THE AUTH KEY
-					$key = $by->model_key;
+					$email 		= trim(\DB::escape(\Request::post('email')));
+					$password 	= md5(trim(\DB::escape(\Request::post('password'))));
+					$by 		= \Auth::by();
+					$user 		= \Model::get($by->model_name)->where("`{$by->login_with}` = '{$email}' AND `{$by->login_pass}` = '{$password}'")->limit(1)->load();
 
-					//UPDATE THE SESSION
-					\Session::set($by->session_name, $user->first()->$key);
+					if($user->count()){
 
-					//SET TO REDIRECT
-					$redirect = true;
-				}
-				else{
-					\Helper::Flash()->add_flash("Password or email is incorrect");
+						//GET THE AUTH KEY
+						$key = $by->model_key;
+
+						//UPDATE THE SESSION
+						\Session::set($by->session_name, $user->first()->$key);
+
+						//SET TO REDIRECT
+						$redirect = true;
+					}
+					else{
+						\Helper::Flash()->add_flash("Password or email is incorrect");
+					}
 				}
 			}
 
