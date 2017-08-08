@@ -77,16 +77,27 @@
 
 		public function render_pagination(){
 
-			$this->_page_count = 1;
-
-			$this->new_url = array_values(array_filter(explode('/', WEB_APP.Accretion::$controller->get_controller_template_web_path().Accretion::$template_name)));
+			$this->new_url = array_values(array_filter(explode('/', Loader::$controller->get_controller_template_web_path().Loader::$template_name)));
 			$this->url_without_rpp = $this->new_url;
+
 			$vars = \Request::get_vars();
 			foreach($vars as $k => $v){
-				if($k == 'page') continue;
-				$this->new_url[] = $k.'='.$v;
+				if($k === 'page') continue;
+				if(is_numeric($k)){
+					$this->new_url[] = $v;					
+				}
+				else{
+					$this->new_url[] = $k.'='.$v;
+				}
+				
 				if($k !== 'rpp'){
-					$this->url_without_rpp[] = $k.'='.$v;
+					if(is_numeric($k)){
+						$this->url_without_rpp[] = $v;	
+					}
+					else{
+						$this->url_without_rpp[] = $k.'='.$v;
+					}
+					
 				}
 			}
 
@@ -157,9 +168,6 @@
 			}
 			ksort($new_rpp);
 			$this->rpp_array = $new_rpp;
-
-			//$this->url_without_rpp = $url_without_rpp;
-			//$this->rpp = $rpp;
 
 			View::get('navigation', 'Paginate', false, false);
 		}
