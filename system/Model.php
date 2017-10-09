@@ -48,7 +48,7 @@
 			}
 			
 			if(empty($this->_only)){
-				unset($this->_only);
+				//unset($this->_only);
 			}
 
 			return $this;
@@ -372,14 +372,11 @@
 				$primary_field_value 	= $res[$primary_field];
 
 				//SET THE DATA
-				$this->set($res);				
-				
-				//IF THERE IS AN AFTER LOAD METHOD RUN IT
-				if(empty($this->_only) && !empty($this->_after_load) && $this->_call_hooks === true){					
-					foreach($this->_after_load as $method){
-						if(method_exists($this, $method));
-						$this->$method();
-					}
+				$this->set($res);
+
+				//IF THERE IS AN AFTER LOAD METHOD RUN IT				
+				if(empty($this->_only) && method_exists($this, '_after_load') && $this->_call_hooks === true){
+					$this->_after_load();
 				}
 
 				$this->call_hooks(true);
@@ -755,8 +752,7 @@
 		public function table_structure($force = false){
 			if(Config::get('model_schema') && Config::get('model_schema') == true){
 				return Helper::Model_Structure($this)->generate($force);
-			}
-			
+			}			
 		}
 
 		public function db_name(){
@@ -1002,55 +998,5 @@
 				'model_method'		=> $parsed['model_method'],
 			];
 		}
-
-
-//-------------------------------------// MODEL ORM HOOKS //---------------------------------//	
-
-		public function _orm_before_save($method_name, $method_data = array()){
-			if(!isset($this->_orm_before_save)){
-				$this->_orm_before_save = array();
-			}
-			$this->_orm_before_save[] = array(
-				'method' => $method_name,
-				'params' => $method_data
-			);
-		}
-
-		public function _orm_before_create($method_name, $method_data = array()){
-			if(!isset($this->_orm_before_create)){
-				$this->_orm_before_create = array();
-			}
-			$this->_orm_before_create[] = array(
-				'method' => $method_name,
-				'params' => $method_data
-			);
-		}
-
-		public function _orm_after_create($method_name, $method_data = array()){
-			if(!isset($this->_orm_after_create)){
-				$this->_orm_after_create = array();
-			}
-			$this->_orm_after_create[] = array(
-				'method' => $method_name,
-				'params' => $method_data
-			);
-		}
-
-		public function _orm_after_save($method_name, $method_data = array()){
-			if(!isset($this->_orm_after_save)){
-				$this->_orm_after_save = array();
-			}
-			$this->_orm_after_save[] = array(
-				'method' => $method_name,
-				'params' => $method_data
-			);
-		}
-
-		/*public function after_load($method){
-			if(!isset($this->_after_load)){
-				$this->_after_load = array();
-			}
-			$this->_after_load[] = $method;
-		}*/			
 	}
 ?>
