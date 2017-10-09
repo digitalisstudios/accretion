@@ -18,6 +18,8 @@
 			//DEFINE COMPONENT PATHS
 			define('CONTROLLER_PATH', APP_PATH.'controller/');
 			define('SYSTEM_PATH', APP_PATH.'system/');
+			define('CONFIG_PATH', APP_PATH.'config/');
+			define('SPARK_PATH', APP_PATH.'command/');
 			define('SYSTEM_HELPER_PATH', SYSTEM_PATH.'helper/');
 			define('HELPER_PATH', APP_PATH.'helper/');
 			define('MODEL_PATH', APP_PATH.'model/');
@@ -31,6 +33,10 @@
 			define('WEB_PATH', '/');			
 			
 			if(isset($_SERVER['SCRIPT_NAME'])){
+
+				if(!isset($_SERVER['REQUEST_URI'])){
+					$_SERVER['REQUEST_URI'] = '';
+				}
 
 				$parts 			= array();
 				$script_parts 	= array_values(array_filter(explode('/', dirname($_SERVER['SCRIPT_NAME']))));
@@ -69,11 +75,11 @@
 			define('WEB_JS_PATH', WEB_VIEW_PATH.'js/');
 			define('WEB_CSS_PATH', WEB_VIEW_PATH.'css/');
 
-			//SET THE SERVER MODE
-			Config::get_server_mode();
-
 			//GET THE SERVER CONFIG VALUES
 			Config::get_loader_config();
+
+			//SET THE SERVER MODE
+			Config::get_server_mode();			
 
 			//PARSE THE SETTINGS BASED ON THE CURRENT SERVER
 			Config::$data = Config::parse_server_settings();
@@ -105,13 +111,15 @@
 
 			//CREATE THE FILE IF IT DOES NOT EXIST
 			if(!file_exists($loader_config)){
-				
+
+				$conf = [
+					'HTTP_HOST' 	=> $_SERVER['SERVER_NAME'],
+					'SERVER_ADDR' 	=> $_SERVER['SERVER_ADDR'],
+					'dev_mode'		=> 'false'
+				];
+
 				//GENERATE THE STRING
-				$str = "{\n";
-				$str .= '	"HTTP_HOST" 	: "'.$_SERVER['SERVER_NAME'].'",'."\n";
-				$str .= '	"SERVER_ADDR" 	: "'.$_SERVER['SERVER_ADDR'].'",'."\n";
-				$str .= '	"dev_mode		: "false"'."\n";
-				$str .= '}';
+				$str = json_encode($conf);
 
 				//STORE THE FILE
 				$handle = fopen($loader_config, 'w+');
@@ -159,10 +167,10 @@
 		public static function compile_settings(){
 
 			//IF SETTINGS ALREADY COMPILED SKIP
-			if(Config::$data) return Config::$data;
+			//if(Config::$data) return Config::$data;
 
 			//SET THE SETTINGS FILE
-			$settings = dirname(__FILE__).'/global/Settings.php';
+			$settings = dirname(__FILE__).'/../config/Settings.php';
 
 			//INCLUDE THE SETTINGS FILE
 			include $settings;
@@ -223,6 +231,12 @@
 			}
 
 			Config::$data->database = $dbs;
+
+			if(strpos(Config::$data->database->main->host, 'COMPILE_APP_') !== false){
+				if(\Config::parse_server_settings()->use_db !== 'false'){
+					//Helper::DB_Installer()->run();
+				}				
+			}
 		}
 
 		public static function parse_server_settings($data = null, $last_key = null){

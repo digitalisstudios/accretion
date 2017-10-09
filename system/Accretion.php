@@ -24,14 +24,14 @@
                 //DEFINE THE CLASSES TO LOAD
                 $classes = [
                     'Functions',
-                    'global/Global_Functions', 
+                    '../config/Global_Functions', 
                     'Session', 
                     'Request', 
                     'View', 
                     'Helper',
                     'Controller',
                     'ORM_Wrapper', 
-                    'global/Global_Model_Method',
+                    '../config/Global_Model_Method',
                     'Magic_Model',
                     'Model',
                     'DB', 
@@ -42,10 +42,10 @@
                 ];
 
                 //LOAD THE CLASSES
-                foreach($classes as $class) require_once __DIR__.'/'.$class.'.php';                   
+                foreach($classes as $class) require_once __DIR__.'/'.$class.'.php';       
 
                 //INITIALIZE THE CONFIGURATION
-                \Config::init();                
+                \Config::init();
             }
         }
 

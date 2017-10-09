@@ -46,7 +46,7 @@
 		public function forward($name, $value){
 
 			//LOOP THROUGH THE FORWARD METHODS
-			foreach(array('forward_has_many','forward_has_many_through','forward_has_one','forward_has_one_through') as $forwarder){
+			foreach(array('forward_has_many','forward_has_many_through','forward_has_one','forward_has_one_through','forward_has_many_merge_through') as $forwarder){
 				
 				$res = $this->$forwarder($name, $value);
 
@@ -59,127 +59,198 @@
 			return false;				
 		}
 
+		public function forward_has_one($name, $value){
+			return $this->get_has($name, $value, true);
+		}
+
 		public function forward_has_many($name, $value){
+			return $this->get_has($name, $value, false);	
+		}
 
-			//CHECK IF THIS MODEL HAS MANY
-			if(isset($this->_has_many)){
+		public function forward_has_one_through($name, $value){
+			return $this->get_has_through($name, $value, true);				
+		}
 
-				foreach($this->_has_many as $get){
+		public function forward_has_many_through($name, $value){
+			return $this->get_has_through($name, $value, false);
+		}
+
+		public function forward_has_many_merge_through($name, $val){
+			return $this->get_has_many_merge_through($name, $val);
+		}
+
+
+
+		public function get_has($name, $value, $single = false){
+
+			$check = $single === true ? '_has_one' : '_has_many';
+			$check = $this->$check;
+
+			//CHECK IF THIS MODEL HAS MANY		
+			if(isset($check[strtolower($name)])){
+
+				$get 			= $check[strtolower($name)];
+
+				//SET THE TABLE NAME
+				$get['table'] 	= $this->table_name($get['model']);						
 				
-					//SET THE TABLE NAME
-					$get['table'] = $this->table_name($get['model']);
 
-					//CHECK THAT THIS IS THE PROPERTY WE WANT
-					if($get['alias'] === false && (strtolower($name) == strtolower($get['table']) || strtolower($name) == strtolower($get['model'])) || $get['alias'] !== false && strtolower($name) == $get['alias']){
+				//LOAD THE MODEL AND SET THE PARENT
+				$model 	= Model::get($get['model'])->set_parent($this);
 
-						//LOAD THE MODEL AND SET THE PARENT
-						$model 	= Model::get($get['model'])->set_parent($this);
-
-						//IF NO LOCAL FIELD WAS PASSED DO NOT USE THE MAP
-						if(!isset($get['local_field'])){
-							$model->use_map(false);
-						}
-
-						//THE LOCAL FIELD WAS PASSED SO GET THE VARS
-						else{
-							$local_field 	= $get['local_field'];
-							$field_value 	= $this->$local_field;
-							$field_name 	= $get['remote_field'];
-						}
-
-						//SET RELATIONSHIP WHERE VALUE
-						if(!empty($get['where'])){
-							$model->where($get['where']);
-						}
-
-						//SET THE PASSED WHERE VALUE
-						if(!empty($value)){				
-							$model->where($value[0]);							
-						}
-
-						//SET THE WHERE VALUE IF WE NEED TO USE THE MAP
-						if(!isset($model->_use_map) || $model->_use_map === true){
-							$model->where("`{$field_name}` = '{$field_value}'");
-						}
-
-						//RETURN THE LOADED MODEL
-						return $model->load();
-					}
+				//IF NO LOCAL FIELD WAS PASSED DO NOT USE THE MAP
+				if(!isset($get['local_field'])){
+					$model->use_map(false);
 				}
-			}
+
+				//THE LOCAL FIELD WAS PASSED SO GET THE VARS
+				else{
+					$local_field 	= $get['local_field'];
+					$field_value 	= $this->$local_field;
+					$field_name 	= $get['remote_field'];
+				}
+
+				//SET RELATIONSHIP WHERE VALUE
+				if(!empty($get['where'])){
+					$model->where($get['where']);
+				}
+
+				//SET THE PASSED WHERE VALUE
+				if(!empty($value)){				
+					$model->where($value[0]);							
+				}
+
+				//SET THE WHERE VALUE IF WE NEED TO USE THE MAP
+				if(!isset($model->_use_map) || $model->_use_map === true){
+					$model->where("`{$model->_where_alias}`.`{$field_name}` = '{$field_value}'");	
+				}
+
+				if($model->_single == true){
+					$single = true;
+				}
+
+				if($single === true){					
+
+					$res = $model->single($single)->load();
+
+					if(is_model($res)){
+						
+						$primary_field = $res->primary_field();
+
+						if(isset($res->$primary_field)){
+							return $res;
+						}
+						else{
+							return array();
+						}
+					}	
+					return $res;
+				}
+				
+
+				//RETURN THE LOADED MODEL
+				return $model->single($single)->load();
+
+			}	
 
 			return false;
 		}
 
-		public function forward_has_many_through($name, $value){
+		public function get_has_many_merge_through($name, $val){
 			
-			//CHECK FOR A HAS MANY THROUGH RELATIONSHIP
-			if(isset($this->_has_many_through)){
+			$check = $this->_has_many_merge_through;
 
-				//CYCLE THROUGH THE 
-				foreach($this->_has_many_through as $get){
+			if(isset($check[strtolower($name)])){
+				$get 							= $check[strtolower($name)];
+				$get['table'] 					= $this->table_name($get['model']);
+				$where 							= [];
+				$target_model 					= $get['model'];
+				$target_primary_field 			= Model::get($target_model)->primary_field();
+				$where['only'] 					= array($target_primary_field);
+				$ids 							= array();
 
-					//GET THE TABLE NAME FOR THE MODEL
-					$get['table'] = $this->table_name($get['model']);					
-					
-					//CHECK FOR A MATCH
-					if($get['alias'] === false && (strtolower($name) == strtolower($get['table']) || strtolower($name) == strtolower($get['model'])) || $get['alias'] !== false && strtolower($name) == $get['alias']){		
-
-
+				foreach($get['merge_models'] as $merge_model){
+					$model_name = $merge_model['alias'];
+					$map_where = ['only' => [$target_primary_field]];
+					$map_where[] = $merge_model['where'];
+					$map_model = $this->$model_name($map_where);
+					if(is_object($map_model)){
+						if(get_class($map_model) == 'ORM_Wrapper'){
+							$ids = array_merge($map_model->get_column($target_primary_field));
+						}
+						else{
+							if($map_model->$target_primary_field){
+								$ids[] = $map_model->$target_primary_field;
+							}
 							
-						$model_name = $get['map_model'];
-
-						$map_where = array();
-						//$map_where 	= array('wrap' => true);
-
-						if(!empty($get['map_where'])){
-							$map_where['where'][] = $get['map_where'];
 						}
+					}
+				}
 
-						if(!empty($value)){
-							if(isset($value[0]['map_where'])){
-								$map_where['where'][] = $value[0]['map_where'];
-							}
-						}
+				$target_records = Model::get($target_model);
+				$ids 			= implode(',', array_unique($ids));
+				$where 			= array('where' => array(
+					$target_primary_field." IN({$ids}) "
+				));
 
-						
-						$map_model 		= $this->$model_name($map_where);
-						$target_model 	= $get['model'];
-						$target_model_name = strtolower($target_model);
-						if($get['map_alias']){
-							$target_model_name = $get['map_alias'];
-						}
+				if(!empty($get['where'])){
+					$where['where'][] = $get['where'];
+				}
 
-						$target_primary_field 	= Model::get($target_model)->primary_field();
-						$where['only'] 			= array($target_primary_field);
-						$ids 					= array();	
+				if(!empty($value)){
+					$where['where'][] = $value[0];
+				}
 
+				$target_records->where($where)->set_parent($this);
 
+				$single = false;
 
-						if(is_object($map_model)){
-							if(get_class($map_model) == 'ORM_Wrapper'){
+				if($target_records->_single == true){
+					$single = true;
+				}
 
-								if($map_model->count()){
+				return $target_records->single($single)->load();
+			}
 
-									foreach($map_model as $k => $v){
+		}				
 
-										$sub_res = $v->$target_model_name($where);
+		public function get_has_through($name, $value, $single = false){
 
-										if(get_class($sub_res) == 'ORM_Wrapper'){
-											if($sub_res->count()){
-												foreach($sub_res as $x => $r){
-													$ids[] = $r->$target_primary_field;
-												}
-											}
-										}
-										else{
-											$ids[] = $sub_res->$target_primary_field;
-										}
-									}
-								}
-							}
-							else{
-								$sub_res = $map_model->$target_model_name($where);
+			$check = $single === true ? '_has_one_through' : '_has_many_through';
+			$check = $this->$check;
+
+			if(isset($check[strtolower($name)])){
+				$get = $check[strtolower($name)];
+				$get['table'] 					= $this->table_name($get['model']);
+				$model_name 					= $get['map_alias'];
+				$map_where = [];
+
+				if(!empty($get['map_where'])){
+					$map_where['where'][] 		= $get['map_where'];
+				}
+
+				if(!empty($value)){
+					if(isset($value[0]['map_where'])){
+						$map_where['where'][] 	= $value[0]['map_where'];
+					}
+				}
+				
+				$map_model 						= $this->$model_name($map_where);
+				$where 							= [];
+				$target_model 					= $get['model'];
+				$target_model_name 				= $get['map_method'] !== false ? $get['map_method'] : strtolower($get['model']);
+				$target_primary_field 			= Model::get($target_model)->primary_field();
+				$where['only'] 					= array($target_primary_field);
+				$ids 							= array();	
+
+				if(is_object($map_model)){
+					if(get_class($map_model) == 'ORM_Wrapper'){
+
+						if($map_model->count()){
+
+							foreach($map_model as $k => $v){																	
+
+								$sub_res = $v->$target_model_name($where);
 
 								if(get_class($sub_res) == 'ORM_Wrapper'){
 									if($sub_res->count()){
@@ -193,176 +264,54 @@
 								}
 							}
 						}
-						elseif(is_array($map_model)){
-							if(!empty($map_model)){
-								foreach($map_model as $k => $v){
-									$ids[] = $v->$target_primary_field;
-								}
-							}
-						}
-
-						$target_records = Model::get($target_model);
-						$ids 			= implode(',', array_unique($ids));
-						$where 			= array('where' => array(
-							$target_primary_field." IN({$ids}) "
-						));
-
-						if(!empty($get['where'])){
-							$where['where'][] = $get['where'];
-						}
-
-						if(!empty($value)){
-							$where['where'][] = $value[0];
-						}
-
-						return $target_records->where($where)->set_parent($this)->load();
 					}
-				}
-			}
-			return false;
-		}
+					else{
+						$sub_res = $map_model->$target_model_name($where);
 
-		public function forward_has_one($name, $value){
-
-			//CHECK IF THIS MODEL HAS ONE
-			if(isset($this->_has_one)){
-				foreach($this->_has_one as $get){			
-					$get['table'] = $this->table_name($get['model']);
-					if($get['alias'] === false && (strtolower($name) == strtolower($get['table']) || strtolower($name) == strtolower($get['model'])) || $get['alias'] !== false && strtolower($name) == $get['alias']){
-
-						$local_field = $get['local_field'];
-
-						if(!isset($this->$local_field)){
-							continue;
-						}
-						
-						$field_value 	= $this->$local_field;
-						$field_name 	= $get['remote_field'];				
-						$model 			= Model::get($get['model'])->where("{$field_name} = '{$field_value}'")->limit(1);
-
-						if(!empty($get['where'])){
-							$model->where($get['where']);
-						}
-
-						if(!empty($value)){
-							$model->where($value[0]);
-						}
-
-						$model = $model->set_parent($this)->load();
-						
-						if(get_class($model) == 'ORM_Wrapper'){
-							if($model->count()){
-								return $model->first();
-							}
-							else{
-								return $model;
-							}
-						} 
-						else{
-							return $model;
-						}
-					}
-				}
-			}
-			return false;
-		}
-
-		public function forward_has_one_through($name, $value){
-			
-			//CHECK FOR A HAS MANY THROUGH RELATIONSHIP
-			if(isset($this->_has_one_through)){
-
-				//CYCLE THROUGH THE 
-				foreach($this->_has_one_through as $get){
-
-					//GET THE TABLE NAME FOR THE MODEL
-					$get['table'] = $this->table_name($get['model']);					
-					
-					//CHECK FOR A MATCH
-					if($get['alias'] === false && (strtolower($name) == strtolower($get['table']) || strtolower($name) == strtolower($get['model'])) || $get['alias'] !== false && strtolower($name) == $get['alias']){						
-							
-						$model_name = $get['map_model'];
-						//$map_where 	= array('wrap' => true);
-						$map_where = array();
-
-						if(!empty($get['map_where'])){
-							$map_where['where'][] = $get['map_where'];
-						}
-
-						if(!empty($value)){
-							if(isset($value[0]['map_where'])){
-								$map_where['where'][] = $value[0]['map_where'];
-							}
-						}
-						
-						$map_model 		= $this->$model_name($map_where);
-						$target_model 	= $get['model'];
-						$target_model_name = strtolower($target_model);
-						if($get['map_alias']){
-							$target_model_name = $get['map_alias'];
-						}
-
-						$target_primary_field 	= Model::get($target_model)->primary_field();
-						$where['only'] 			= array($target_primary_field);
-						$ids 					= array();						
-
-						
-						if(get_class($map_model) == 'ORM_Wrapper'){
-
-							if($map_model->count()){
-
-								foreach($map_model as $k => $v){
-
-									$sub_res = $v->$target_model_name($where);
-
-									if(get_class($sub_res) == 'ORM_Wrapper'){
-										if($sub_res->count()){
-											foreach($sub_res as $x => $r){
-												$ids[] = $r->$target_primary_field;
-											}
-										}
-									}
-									else{
-										$ids[] = $sub_res->$target_primary_field;
-									}
+						if(get_class($sub_res) == 'ORM_Wrapper'){
+							if($sub_res->count()){
+								foreach($sub_res as $x => $r){
+									$ids[] = $r->$target_primary_field;
 								}
 							}
 						}
 						else{
-							$sub_res = $map_model->$target_model_name($where);
-
-							if(get_class($sub_res) == 'ORM_Wrapper'){
-								if($sub_res->count()){
-									foreach($sub_res as $x => $r){
-										$ids[] = $r->$target_primary_field;
-									}
-								}
-							}
-							else{
-								$ids[] = $sub_res->$target_primary_field;
-							}
+							$ids[] = $sub_res->$target_primary_field;
 						}
-						
-
-						$target_records = Model::get($target_model);
-						$ids 			= implode(',', array_unique($ids));
-						$where 			= array('where' => array(
-							$target_primary_field." IN({$ids}) "
-						));
-
-						if(!empty($get['where'])){
-							$where['where'][] = $get['where'];
-						}
-
-						if(!empty($value)){
-							$where['where'][] = $value[0];
-						}
-
-						return $target_records->where($where)->set_parent($this)->single(true)->load();
 					}
 				}
+				elseif(is_array($map_model)){
+					if(!empty($map_model)){
+						foreach($map_model as $k => $v){
+							$ids[] = $v->$target_primary_field;
+						}
+					}
+				}
+
+				$target_records = Model::get($target_model);
+				$ids 			= implode(',', array_unique($ids));
+				$where 			= array('where' => array(
+					$target_primary_field." IN({$ids}) "
+				));
+
+				if(!empty($get['where'])){
+					$where['where'][] = $get['where'];
+				}
+
+				if(!empty($value)){
+					$where['where'][] = $value[0];
+				}
+
+				$target_records->where($where)->set_parent($this);
+
+				if($target_records->_single == true){
+					$single = true;
+				}
+
+				return $target_records->single($single)->load();
 			}
-			return false;
+
+			return false;			
 		}
 	}
 ?>

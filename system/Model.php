@@ -3,6 +3,30 @@
 
 		public static $models 		= array();
 		public static $model_names 	= false;
+		public static $model_cache 	= array();
+
+		public $_where = [];
+		public $_order;
+		public $_limit;
+		public $_limit_start;
+		public $_count = false;
+		public $_single = false;
+		public $_paginate;
+		public $_only = [];
+		public $_sum;
+		public $_get_query = false;
+		public $_map_where;
+		public $_where_join = [];
+		public $_where_alias;
+		public $_where_join_first;
+		public $_use_map;
+		public $_call_hooks = true;
+		public $_has_one = [];
+		public $_has_many = [];
+		public $_has_one_through = [];
+		public $_has_many_through = [];
+		public $_has_many_merge_through = [];
+		public $_database;
 
 		public function __construct(){
 		
@@ -274,25 +298,28 @@
 			}
 
 			//SEND BACK THE QUERY
-			if($this->_get_query){
+			if(isset($this->_get_query) && !is_null($this->_get_query) && $this->_get_query == true){
 				return $sql;
 			}		
 
 			//SEND BACK THE COUNT
-			if($this->_count){
-				return (int)(DB::get_row($sql)['count']);
+			if(isset($this->_count) && !is_null($this->_count) && $this->_count == true){
+				return (int)($this->model_db()->get_row($sql)['count']);
 			}
 
 			//SEND BACK THE SUM
-			elseif($this->_sum){
-				return DB::get_row($sql)['summed'];
-			}					
+			elseif(isset($this->_sum) && !is_null($this->_sum) && $this->_sum !== false && is_string($this->_sum) && $this->_sum != ""){
+				return $this->model_db()->get_row($sql)['summed'];
+			}				
 			
 			//IF NO ID WAS PROVIDED AND SINGLE IS NOT ENABLED
 			if($id === false && $this->_single === false){				
 
 				//GET THE RESULT
-				$res = DB::get_rows($sql);			
+				//$res = DB::get_rows($sql);
+
+				//GET THE RESULT
+				$res = $this->model_db()->get_rows($sql);					
 				
 				//INIT THE RETURN
 				$ret = array();
@@ -307,30 +334,17 @@
 					foreach($res as $key => $record){
 						
 						//GET THE MODEL
-						$model 		= new $model_name;	
-
-						//DEFUNCT METHOD (SHOULD BE REMOVED)
-						if(isset($this->_pass_to_child)){
-							foreach($this->_pass_to_child as $name => $var){
-								$model->$name = $var;
-							}	
-						}
+						$primary_field_value = $record[$primary_field];
+						
+						//GET THE MODEL
+						$model = Model::get($model_name);
 						
 						//SET THE MODEL DATA
-						$model->set($record);
-
-						//CHECK FOR HOOKS
-						$use_hooks = true;
-						if(isset($model->_call_hooks) && $model->_call_hooks === false){
-							$use_hooks = false;
-						}
+						$model->set($record);						
 
 						//IF THERE IS AN AFTER LOAD METHOD RUN IT				
-						if((!isset($model->_only) && !isset($this->_only)) && isset($model->_after_load) && $use_hooks === true){					
-							foreach($model->_after_load as $method){
-								if(method_exists($model, $method));
-								$model->$method();
-							}
+						if(empty($model->_only) && method_exists($model, '_after_load') && $model->_call_hooks === true){
+							$model->_after_load();
 						}
 
 						//TURN HOOKS ON
@@ -341,45 +355,37 @@
 					}
 				}
 
-				//IF THE MODEL NEEDS TO BE WRAPPED
-				//if(isset($this->_wrap) && $this->_wrap){
+				//INIT THE WRAPPED
+				$wrapper = new ORM_Wrapper;
 
-					//INIT THE WRAPPED
-					$wrapper = new ORM_Wrapper;
-
-					//ADD THE OBJECT
-					return $wrapper->push($ret);
-				//}
-				
-				//RETURN THE ARRAY
-				//return $ret;
+				//ADD THE OBJECT
+				return $wrapper->push($ret);
 			}
 
 			//ID OR SINGLE WAS PASSED
 			else{
 				
 				//GET THE RESULT
-				$res = DB::get_row($sql);
+				$res = $this->model_db()->get_row($sql);
+
+				$model_name 			= $this->model_name();
+				$primary_field_value 	= $res[$primary_field];
 
 				//SET THE DATA
-				$this->set($res);
-
-				//CHECK FOR HOOKS
-				$use_hooks = true;
-				if(isset($this->_call_hooks) && $this->_call_hooks === false){
-					$use_hooks = false;
-				}
+				$this->set($res);				
 				
 				//IF THERE IS AN AFTER LOAD METHOD RUN IT
-				if(!isset($this->_only) && isset($this->_after_load) && $use_hooks === true){					
+				if(empty($this->_only) && !empty($this->_after_load) && $this->_call_hooks === true){					
 					foreach($this->_after_load as $method){
 						if(method_exists($this, $method));
 						$this->$method();
 					}
 				}
 
+				$this->call_hooks(true);
+
 				//RETURN THE MODEL WITH HOOKS ON
-				return $this->call_hooks(true);
+				return $this;
 			}
 		}
 
@@ -399,23 +405,13 @@
 			if(!isset($this->table_name)){
 				$this->table_name = strtolower($this->model_name());
 			}
+
 			//GET THE PRIMARY FIELD
 			$primary_field = $this->primary_field();
-
-			//CHECK FOR HOOKS
-			$use_hooks = true;
-			if(isset($this->_call_hooks) && $this->_call_hooks === false){
-				$use_hooks = false;
-			}
-
-			if(!isset($this->_only) && isset($this->_orm_before_save) && $use_hooks === true){
-				foreach($this->_orm_before_save as $before){
-					if(method_exists($this, $before['method'])){
-						$method = $before['method'];
-						$this->$method($before['params']);							
-					}						
-				}
-			}	
+			
+			if(empty($this->_only) && method_exists($this, '_before_save') && $this->_call_hooks === true){
+				$this->_before_save();
+			}			
 
 			//EXTRACT DATA
 			$data = $this->expose_data();
@@ -439,59 +435,58 @@
 			//INSERT A NEW RECORD
 			if(!isset($data[$primary_field])){
 
-				if(!isset($this->_only) && isset($this->_orm_before_create) && $use_hooks === true){
-					foreach($this->_orm_before_create as $before){
-						if(method_exists($this, $before['method'])){
-							$method = $before['method'];
-							$this->$method();
-						}
-
-					}
+				if(empty($this->_only) && method_exists($this, '_before_create') && $this->_call_hooks === true){
+					$this->_before_create();
 				}	
-				$id = DB::insert($this->table_name, $data);
-				$this->load($id);
 
-				if(!isset($this->_only) && isset($this->_orm_after_create) && $use_hooks === true){
-					foreach($this->_orm_after_create as $after){
-						if(method_exists($this, $after['method'])){
-							$method = $after['method'];
-							$this->$method();
-						}
-					}
-				}
+				$id = $this->model_db()->insert($this->table_name, $data);
+				$new_data = $this->model_db()->get_row("SELECT * FROM `{$this->table_name}` WHERE {$primary_field} = '{$id}'");
+				$this->set($new_data);
+
+				if(empty($this->_only) && method_exists($this, '_after_create') && $this->_call_hooks === true){
+					$this->_after_create();
+				}				
 			}
 
 			//UPDATE THE RECORD BECAUSE AN ID WAS PROVIDED
 			else{
 				
 				//CHECK THAT THE RECORD EXISTS
-				if(DB::get_row("SELECT * FROM `{$this->table_name}` WHERE {$primary_field} = '{$data[$primary_field]}'")){
-					DB::update($this->table_name, $data, "{$primary_field} = '{$data[$primary_field]}'");
-					$new_data = DB::get_row("SELECT * FROM `{$this->table_name}` WHERE {$primary_field} = '{$data[$primary_field]}'");
+				if($this->model_db()->get_row("SELECT * FROM `{$this->table_name}` WHERE {$primary_field} = '{$data[$primary_field]}'")){
+
+					if(empty($this->_only) && method_exists($this, '_before_update') && $this->_call_hooks === true){
+						$this->_before_update();
+					}
+
+					$this->model_db()->update($this->table_name, $data, "{$primary_field} = '{$data[$primary_field]}'");
+					$new_data = $this->model_db()->get_row("SELECT * FROM `{$this->table_name}` WHERE {$primary_field} = '{$data[$primary_field]}'");
 					$this->set($new_data);
-					$id = $data[$primary_field];					
+					$id = $data[$primary_field];
+
+					if(empty($this->_only) && method_exists($this, '_after_update') && $this->_call_hooks === true){
+						$this->_after_update();
+					}					
 				}
 				
 				//CREATE A NEW RECORD
-				else{					
-					$id = DB::insert($this->table_name, $data);
-					$this->load($id);
-				}
-			}			
+				else{				
 
-			if(!isset($this->_only) && isset($this->_orm_after_save) && $use_hooks === true){
-				foreach($this->_orm_after_save as $after){
-					if(method_exists($this, $after['method'])){
-						$method = $after['method'];
-						if(isset($method['params'])){
-							
-							$this->$method($method['params']);
-						}
-						else{
-							$this->$method();
-						}						
+					if(empty($this->_only) && method_exists($this, '_before_create') && $this->_call_hooks === true){
+						$this->_before_create();
+					}	
+
+					$id = $this->model_db()->insert($this->table_name, $data);
+					$new_data = $this->model_db()->get_row("SELECT * FROM `{$this->table_name}` WHERE {$primary_field} = '{$id}'");
+					$this->set($new_data);
+
+					if(empty($this->_only) && method_exists($this, '_after_create') && $this->_call_hooks === true){
+						$this->_after_create();
 					}
 				}
+			}
+
+			if(empty($this->_only) && method_exists($this, '_after_save') && $this->_call_hooks === true){
+				$this->_after_save();
 			}
 
 			//SEND BACK THE MODEL WITH HOOKS TURNED ON
@@ -513,7 +508,13 @@
 			$primary_field = $this->primary_field();
 
 			//DELETE THE RECORD
-			return DB::query("DELETE FROM `{$this->table_name}` WHERE {$primary_field} = '{$data[$primary_field]}'");
+			return $this->model_db()->query("DELETE FROM `{$this->table_name}` WHERE {$primary_field} = '{$data[$primary_field]}'");
+		}
+
+		//METHOD FOR CALLING THE PARENT CONSTRUCTOR
+		public function construct_parent(){
+			parent::__construct();
+			return $this;
 		}
 
 		//GET A MODEL BY NAME
@@ -548,8 +549,14 @@
 					//LOAD A NEW INSTANCE OF THE MODEL
 					$model = new $model_name;
 
+					//RUN PARENT CONSTRUCTOR
+					$model->construct_parent();
+
 					//SET THE TABLE NAME FOR THE MODEL
 					$model->table_name();
+
+					//SET THE INITIAL TABLE ALIAS
+					$model->where_alias($model->table_name());
 
 					//RUN THE DB SCHEMA ON THE MODEL
 					$model->table_structure();
@@ -599,6 +606,7 @@
 		//GENERATE THE WHERE STATEMENT FOR LOADING A MODEL
 		public function generate_where($id = false, $field_name = false){
 
+
 			if(!$id || !$field_name){
 
 				//SET THE PRIMARY FIELD
@@ -613,8 +621,9 @@
 			//SET WHERE
 			$where = " WHERE 1=1 ";
 			if($id){
+				$alias = (isset($this->_where_alias) && $this->_where_alias != "" && !is_null($this->_where_alias)) ? "`".$this->_where_alias."`." : "";
 				$where .= "
-				AND ({$field_name} = {$id})";
+				AND ({$alias}`{$field_name}` = '{$id}')";
 			}			
 
 			//CHECK FOR WHERE STATEMENTS
@@ -659,127 +668,86 @@
 			//SET THE PRIMARY FIELD
 			$field_name = $this->primary_field();
 
+			//SET THE SELECT STATEMENT
+			$select 		= "`".$this->_where_alias."`.*";
+
+			//SET THE TABLE ALIAS
+			$table_alias 	= " AS `".$this->_where_alias."`";
+
+			//SET THE ORDER
+			$order 			= trim(isset($this->_order) && $this->_order ? $this->_order : "ORDER BY `{$this->_where_alias}`.`{$field_name}` ASC");
+
 			//SET THE ID
-			if(isset($this->$field_name) && $this->$field_name != ''){
-				$id = $this->$field_name;
-			}	
+			$id = ($id === false && isset($this->$field_name) && $this->$field_name != '') ? $this->$field_name : $id;
 			
 			//GENERATE WHERE STATEMENT
 			$where = $this->generate_where($id);
 
 			//SET TABLE JOIN
 			$where_join = "";
-			if(isset($this->_where_join) && $this->_where_join){
-				foreach($this->_where_join as $join){
-					$where_join .= " {$join['type']} {$join['query']} ";
-				}
+			if(isset($this->_where_join) && is_array($this->_where_join) && !empty($this->_where_join)){
+				foreach($this->_where_join as $join) $where_join .= " {$join['type']} {$join['query']} ";
 			}
 
 			//SET LIMIT
 			$limit = "";
 			if(isset($this->_limit) && $this->_limit){
-				$limit = " LIMIT {$this->_limit}";
-			}
-
-			//SET LIMIT START
-			if(isset($this->_limit_start) && $this->_limit_start){
-				$limit = " LIMIT '{$this->_limit_start}', '{$this->_limit}'";
-			}
-
-			//SET WHERE AND TABLE ALIAS
-			$select = "*";
-			$table_alias = "";
-			if(isset($this->_where_alias) && $this->_where_alias){
-				$select = $this->_where_alias.".*";
-				$table_alias = " AS ".$this->_where_alias;
-			}
-
-			//SET ORDER
-			$order = "ORDER BY {$field_name} ASC";
-			if($table_alias != ""){
-				$order = "ORDER BY {$this->_where_alias}.{$field_name} ASC";
-			}
-
-			if(isset($this->_order) && $this->_order){
-				$order = $this->_order;
-			}
-
-			$order = trim($order);
-
-			//SET ONLY MODE
-			$only = false;
+				$limit = (isset($this->_limit_start) && $this->_limit_start >= 0) ?  " LIMIT {$this->_limit_start}, {$this->_limit}" : " LIMIT {$this->_limit}";
+			}			
+			
+			//SET ONLY SELECT
 			if(isset($this->_only) && $this->_only && !empty($this->_only)){
-				if($table_alias != ""){
-					foreach($this->_only as $k => $v){
-						$this->_only[$k] = $this->_where_alias.".".$v;
-					}
-				}
-				$select = implode(',', $this->_only);
-				$only = true;
-				
+				foreach($this->_only as $k => $v) $this->_only[$k] = "`".$this->_where_alias."`.`".$v."`";
+				$select = implode(',', $this->_only);		
 			}
 
 			//SET SINGLE MODE
-			$single = false;
 			if(isset($this->_single) && $this->_single){
 				$limit = "LIMIT 1";
-				$this->_single = true;
-			}
-			else{
-				$this->_single = false;
-			}
+			}			
 
 			//SET COUNTING
-			$count = false;
 			if(isset($this->_count) && $this->_count){
-				$limit = "";
-				$this->_single = false;
-				$select = "COUNT(*) AS count";
-				if($table_alias != ""){
-					//$select = "COUNT({$this->_where_alias}.*) AS count";
-				}
-				$this->_count = true;
+				$limit 			= "";
+				$this->_single 	= false;
+				$select 		= "COUNT(*) AS `count`";
 			}
-			else{
-				$this->_count = false;
-			}
+
+			$end = "";			
 
 			//SET SUMMING
-			$sum = false;
 			if(isset($this->_sum)){
-				$select = "SUM({$this->_sum}) AS summed";
-				if($table_alias != ""){
-					$select = "SUM({$this->_where_alias}.{$this->_sum}) AS summed";
+				if(strpos($this->_sum, ".")){
+					$select 	= "SUM(`_summing_target`.`_summing_target`) AS `summed` FROM (SELECT {$this->_sum} AS `_summing_target`";
+					$end = "	) AS `_summing_target`";
 				}
-				$this->_sum 	= true;
+				else{
+					$select 	= "SUM(`_summing_target`.`_summing_target`) AS `summed` FROM (SELECT DISTINCT `{$this->_where_alias}`.*, `{$this->_where_alias}`.`{$this->_sum}` AS `_summing_target`";
+					$end = "	) AS `_summing_target`";
+				}
+				
 				$this->_single 	= true;
 				$this->_count 	= false;
-			}
-			else{
-				$this->_sum = false;
-
-			}
+			}			
 
 			//SET THE TABLE NAME
-			$table_name = "`".trim($this->table_name)."`";
-			if(isset($this->_where_join_first)){
-				$table_name = $this->_where_join_first;
-			}
+			$table_name = isset($this->_where_join_first) && is_string($this->_where_join_first) && $this->_where_join_first != "" ? $this->_where_join_first : "`".trim($this->table_name)."`".$table_alias;
 
+			//BUILD THE QUERY PARTS
 			$sql_parts = array(
 				"SELECT DISTINCT",
 				trim($select),
 				"FROM",
 				$table_name,
-				trim(isset($this->_where_join_first) ? "" : $table_alias),
 				trim($where_join),
 				trim($where),
 				trim($order),
-				trim($limit)
+				trim($limit),
+				trim($end)
 			);
 
+			//SEND BACK THE QUERY
 			return trim(implode(" ", array_filter($sql_parts)));
-
 		}		
 
 //-------------------------------------// MODEL UTILITY METHODS //---------------------------------//
@@ -789,6 +757,15 @@
 				return Helper::Model_Structure($this)->generate($force);
 			}
 			
+		}
+
+		public function db_name(){
+
+			if(is_null($this->_database)){
+				$this->_database = 'main';
+			}
+			
+			return $this->_database;
 		}
 
 		public function table_name($model = false){
@@ -818,8 +795,6 @@
 					else{
 						return false;
 					}
-					
-					//return Model::get($model)->table_name();
 				}			
 			}
 
@@ -832,7 +807,11 @@
 
 		public function model_name(){
 			return get_class($this);
-		}		
+		}
+
+		public function model_db(){
+			return  \DB::set($this->db_name());
+		}	
 
 		public function primary_field($table_name = false){
 
@@ -846,7 +825,9 @@
 			}			
 
 			if(!isset($this->primary_field)){
-				$field 					= DB::get_row("SHOW COLUMNS FROM `{$this->table_name()}`");
+
+				$field 					= $this->model_db()->get_row("SHOW COLUMNS FROM `{$this->table_name()}`");
+
 				$this->primary_field 	= $field['Field'];	
 			}
 
@@ -876,57 +857,67 @@
 						unset($data[$k]);
 					}
 				}
-			}
-
-			
+			}		
 
 			return $data;
 		}
 
+		public function parse_alias($model_name){
+			
+			$alias 			= strtolower($model_name);
+			$model_method 	= false;
 
-//-------------------------------------// MODEL RELATIONSHIP SETTER METHODS //---------------------------------//
-
-
-		public function has_one($model_name, $local_field = null, $remote_field = null, $where = array()){
-
-			$alias = false;
 			if(strpos($model_name, '.') !== false){
-				$parts 		= explode('.', $model_name);
-				$alias 		= $parts[0];
-				$model_name = $parts[1];
+				$parts 			= explode('.', $model_name);
+				$alias 			= $parts[0];
+				$model_name 	= $parts[1];
+				if(isset($parts[2])){
+					$model_method 	= $model_name;
+					$model_name 	= $parts[2];
+				}
 			}
 
-			if(!isset($this->_has_one)){
-				$this->_has_one = array();
-			}
+			return ['alias' => $alias, 'model_name' => $model_name, 'model_method' => $model_method];
+
+		}
+
+
+		public function has_one($model_name, $local_field = false, $remote_field = false, $where = array()){
+
+			$parsed = $this->parse_alias($model_name);
 
 			//SET FIELDS IF NEEDED
-			if($local_field == false){
+			if(is_null($local_field) || $local_field === false){
 				$local_field = $this->primary_field();
 			}
 
-			if($remote_field == false){
+			if(is_null($remote_field) || $remote_field === false){
 				$remote_field = $this->primary_field();
 			}
 			
-			$this->_has_one[] = array('model' => $model_name, 'local_field' => $local_field, 'remote_field' => $remote_field, 'where' => $where, 'alias' => $alias);
+			$this->_has_one[$parsed['alias']] = [
+				'model' 		=> $parsed['model_name'], 
+				'local_field' 	=> $local_field, 
+				'remote_field' 	=> $remote_field, 
+				'where' 		=> $where, 
+				'alias' 		=> $parsed['alias'],
+				'model_method'	=> $parsed['model_method'],
+			];
 		}
 
 		public function has_many($model_name, $local_field = false, $remote_field = false, $where = array()){
 
-			$alias = false;
-			if(strpos($model_name, '.') !== false){
-				$parts 		= explode('.', $model_name);
-				$alias 		= $parts[0];
-				$model_name = $parts[1];
-			}
 			
-			if(!isset($this->_has_many)){
-				$this->_has_many = array();
-			}
+			$parsed = $this->parse_alias($model_name);			
 
 			if(is_array($local_field)){
-				$this->_has_many[] = array('model' => $model_name, 'where' => $local_field, 'alias' => $alias);
+
+				$this->_has_many[$parsed['alias']] = [
+					'model' 		=> $parsed['model_name'], 
+					'where' 		=> $local_field, 
+					'alias' 		=> $parsed['alias'],
+					'model_method'	=> $parsed['model_method'],
+				];
 			}
 			else{
 
@@ -939,69 +930,78 @@
 					$remote_field = $this->primary_field();
 				}
 
-				$this->_has_many[] = array('model' => $model_name, 'local_field' => $local_field, 'remote_field' => $remote_field, 'where' => $where, 'alias' => $alias);
+				$this->_has_many[$parsed['alias']] = [
+					'model' 		=> $parsed['model_name'],
+					'local_field' 	=> $local_field, 
+					'remote_field' 	=> $remote_field, 
+					'where' 		=> $where, 
+					'alias' 		=> $parsed['alias'],
+					'model_method'	=> $parsed['model_method'],
+				];
 			}
 		}
 
 		public function has_many_through($model_name, $map_model, $map_where = array(), $where = array()){
+		
 
-			$alias = false;
-			if(strpos($model_name, '.') !== false){
-				$parts 		= explode('.', $model_name);
-				$alias 		= $parts[0];
-				$model_name = $parts[1];
-			}
-
-			$map_alias = false;
-			if(strpos($map_model, '.') !== false){
-				$parts 		= explode('.', $map_model);
-				$map_alias	= $parts[0];
-				$map_model 	= $parts[1];
-			}
-
-			if(!isset($this->_has_many_through)){
-				$this->_has_many_through = array(); 
-			}
+			$parsed 	= $this->parse_alias($model_name);
+			$parsed_map = $this->parse_alias($map_model);
 			
-			$this->_has_many_through[] = array(
-				'model' 			=> $model_name, 
-				'map_model' 		=> $map_model,
+			$this->_has_many_through[$parsed['alias']] = [
+				'model' 			=> $parsed['model_name'], 
+				'map_model' 		=> $parsed_map['model_name'],
 				'map_where'			=> $map_where,
 				'where' 			=> $where,	
-				'alias'				=> $alias,
-				'map_alias'			=> $map_alias		
-			);
+				'alias'				=> $parsed['alias'],
+				'map_alias'			=> $parsed_map['alias'],
+				'model_method'		=> $parsed['model_method'],
+				'map_method'		=> $parsed_map['model_method'],
+			];
 		}
 
 		public function has_one_through($model_name, $map_model, $map_where = array(), $where = array()){
 
-			$alias = false;
-			if(strpos($model_name, '.') !== false){
-				$parts 		= explode('.', $model_name);
-				$alias 		= $parts[0];
-				$model_name = $parts[1];
-			}
-
-			$map_alias = false;
-			if(strpos($map_model, '.') !== false){
-				$parts 		= explode('.', $map_model);
-				$map_alias	= $parts[0];
-				$map_model 	= $parts[1];
-			}
-
-			if(!isset($this->_has_one_through)){
-				$this->_has_one_through = array(); 
-			}
+			$parsed 	= $this->parse_alias($model_name);
+			$parsed_map = $this->parse_alias($map_model);
 			
-			$this->_has_one_through[] = array(
-				'model' 			=> $model_name, 
-				'map_model' 		=> $map_model,
+			$this->_has_one_through[$parsed['alias']] = [
+				'model' 			=> $parsed['model_name'], 
+				'map_model' 		=> $parsed_map['model_name'],
 				'map_where'			=> $map_where,
 				'where' 			=> $where,	
-				'alias'				=> $alias,
-				'map_alias'			=> $map_alias		
-			);
-		}	
+				'alias'				=> $parsed['alias'],
+				'map_alias'			=> $parsed_map['alias'],
+				'model_method'		=> $parsed['model_method'],
+				'map_method'		=> $parsed_map['model_method'],	
+			];
+		}
+
+		public function has_many_merge_through($model_name, $merge_models, $where = array()){
+
+			$parsed 	= $this->parse_alias($model_name);
+			
+			$merged = [];
+			foreach($merge_models as $k => $v){
+				if(is_numeric($k)){
+					$p = $this->parse_alias($v);
+					$p['where'] = [];
+					$merged[] = $p;
+				}
+				else{
+					$p = $this->parse_alias($k);
+					$p['where'] = $v;
+					$merged[] = $p;
+				}
+			}
+			
+			$this->_has_many_merge_through[$parsed['alias']] = [
+				'model' 			=> $parsed['model_name'], 
+				'merge_models' 		=> $merged,
+				'where' 			=> $where,	
+				'alias'				=> $parsed['alias'],
+				'model_method'		=> $parsed['model_method'],
+			];
+		}
 
 
 //-------------------------------------// MODEL ORM HOOKS //---------------------------------//	
@@ -1046,38 +1046,11 @@
 			);
 		}
 
-		public function after_load($method){
+		/*public function after_load($method){
 			if(!isset($this->_after_load)){
 				$this->_after_load = array();
 			}
 			$this->_after_load[] = $method;
-		}		
-
-//-------------------------------------// LEGACY METHODS (REQUIRED FOR BACKWARDS COMPATABILITY) //---------------------------------//		
-
-		public function limit_start($number){
-			$this->_limit_start = $number;
-			return $this;
-		}			
-
-		public function orm_load($id = false){
-			return $this->load($id);
-		}
-
-		public function orm_set($data = array()){
-			return $this->set($data);
-		}
-
-		public function orm_save(){
-			return $this->save();
-		}
-
-		public function orm_delete(){
-			return $this->delete();
-		}
-
-		public function load_model($model_name){
-			return Model::get($model_name);
-		}
+		}*/			
 	}
 ?>

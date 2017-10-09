@@ -5,36 +5,402 @@
 
 	$frm = new Accretion;
 
-	class CLI extends Accretion{
+	class SparkCLI extends Accretion{
+
+		public $commands = [];
+		//public $command;
+		//public $method = false;
+		//public $arguments;
 
 		public function __construct($argv){
+			$this->load_commands();
 			$this->route($argv);
 		}
 
-		public function route($argv){
-			if(method_exists($this, $argv[1])){
-				$method = $argv[1];
-				$this->$method($argv);
-			}
-			else{
-				echo "Error: No method found\n";
+		public function load_commands(){
+			foreach(glob(SPARK_PATH.'*.php') as $file_name){
+				include_once $file_name;
+				$this->commands[\Controller::format_url(pathinfo($file_name)['filename'])] = 'Command\\'.pathinfo($file_name)['filename'];
 			}
 		}
 
-		public function table_sync($argv){
-			echo "\n\nTable Sync Started\n\n";
+		public function route($argv){
 
-			$files = glob(APP_PATH.'model/*.php');
-			$_GET['model_sync'] = true;
-			foreach($files as $file){
-				$model_name = str_replace('.php', '', basename($file));
-				echo 'Updating '.$model_name."\n";
-				if($model_name == 'model_base') continue;
-				Model::$model_name();
+			$command_parts 	= explode(':', $argv[1]);
+			$command 		= $command_parts[0];
+			$method 		= false;
+			if(count($command_parts) == 2){
+				$method = $command_parts[1];
 			}
-			echo "\n\nDone\n\n";
+
+			if(isset($this->commands[$command])){
+
+				$class_name = $this->commands[$command];
+
+				$f = new ReflectionClass($class_name);
+				
+				foreach ($f->getMethods() as $m) {
+				    if ($m->class == $class_name) {
+				    	if($m->name == '__construct') continue;
+
+				    	if(\Controller::format_url($method) == \Controller::format_url($m->name)){
+
+				    		$arguments = $argv;
+				    		unset($arguments[0]);
+				    		unset($arguments[1]);
+				    		$arguments = array_values($arguments);
+
+							$class 			= new $class_name($arguments);
+							if(method_exists($class, $method)){
+								$class->$method($arguments);
+								exit;
+							}
+							else{
+								echo "\nNo Method found with the name of {$method}";
+								exit;
+							}
+						}
+				    }
+				}
+
+				echo "\nNo Method found with the name of {$method}";
+				exit;
+
+
+			}
+			else{
+
+				if(is_null($command) || $command == ''){
+					$this->show_help();
+				}
+				else{
+					echo "\nNo Command found with the namespace of {$command}";
+				}
+				
+				exit;
+			}
+		}
+
+		public function show_help(){
+
+$header = "\n\n
+ ________  ________  ________  ________  ___  __       
+|\   ____\|\   __  \|\   __  \|\   __  \|\  \|\  \     
+\ \  \___|\ \  \|\  \ \  \|\  \ \  \|\  \ \  \/  /|_   
+ \ \_____  \ \   ____\ \   __  \ \   _  _\ \   ___  \  
+  \|____|\  \ \  \___|\ \  \ \  \ \  \\\  \\\ \  \\\ \  \ 
+    ____\_\  \ \__\    \ \__\ \__\ \__\\\ _\\\ \__\\\ \__\
+   |\_________\|__|     \|__|\|__|\|__|\|__|\|__| \|__|
+   \|_________|                              spark v2.1
+   
+-------------------------------------------------------
+             * * * A CLI FOR ACCRETION * * *           
+-------------------------------------------------------	                                                       
+\n\n";
+            echo $this->cli_indent($header, 17);
+
+			echo "          Below are a list of available commands.\n\n";
+
+            $table = [];
+			
+			foreach($this->commands as $command){
+
+				$class = \Controller::format_url(str_replace('Command\\', '', $command));
+				$f = new ReflectionClass($command);
+				$c = $f->newInstanceWithoutConstructor();
+				$methods = $c->methods;
+
+				foreach($methods as $method => $description){
+
+                    $method = \Controller::format_url($method);
+
+                    $table[] = [
+                        'Command'       => $class.':'.$method,
+                        'Description'   => $description
+                    ];
+				}
+
+                $table[] = ['Command' => '', 'Description' => ''];
+			}
+
+            $table = $this->cli_generate_table($table);
+
+            echo $this->cli_indent($table, 5);
+            echo "\n\n";
+			exit;
+		}
+
+        public function cli_indent($string, $indent = 5){
+            
+            $lines = explode("\n", $string);
+
+            foreach($lines as $k => $line){
+
+                $line_indent = "";
+
+                for($x = 0; $x < $indent; $x ++){
+                    $line_indent .= " ";
+                }
+
+                $line = $line_indent.$line;
+
+                $lines[$k] = $line;
+            }
+
+            return implode("\n", $lines);
+
+        }
+
+		public function get_command_methods($class_name, $construct = false){
+
+			$f = new ReflectionClass($class_name);
+
+			$methods = [];
+				
+			foreach ($f->getMethods() as $m) {
+
+			    if ($m->class == $class_name) {
+
+			    	if(!$construct){
+			    		if($m->name == '__construct') continue;
+			    	}
+
+			    	$methods[] = $m->name;
+			    }
+			}
+			return $methods;
+		}
+
+		public function get_input(){
+			$handle = fopen("php://stdin","r");
+			$line = fgets($handle);
+			return trim($line);
+		}
+
+		public function cli_print($text){
+
+			$text = $this->cli_format_output($text);
+
+			if(is_string($text)){
+				echo $text."\n";
+			}
+			elseif(is_array($text) || is_object($text)){
+				print_r($text);
+			}
+			else{
+				var_dump($text);
+			}
+		}
+
+        public function cli_generate_table($data, $print_header = true){
+
+            return \Buffer::start(function($data){
+                $this->cli_print_table($data);
+            }, $data);
+        }
+
+		public function cli_print_table($data, $print_header = true){
+
+			if(!empty($data)){
+				reset($data);
+				$first_key = key($data);
+				
+				if(is_numeric($first_key)){
+					
+					$sub = $data[$first_key];
+
+					if(is_array($sub)){
+						$key_lengths 	= [];
+						$header_height 	= 0;
+						$row_heights 	= [];
+						$keys 			= array_keys($sub);
+						$rows 			= [];
+						$header 		= [];
+
+						foreach($keys as $key){
+
+							$header[$key] = $key;
+
+							$dimensions = $this->cli_get_table_cell_dimensions($key);
+
+							if(!isset($key_lengths[$key]) || $dimensions['x'] > $key_lengths[$key]){
+								$key_lengths[$key] = $dimensions['x'];
+							}
+							
+
+							if($dimensions['y'] > $header_height){
+								$header_height = $dimensions['y'];
+							}
+
+
+							$column = array_column($data, $key);
+
+							foreach($column as $row_key => $row){
+
+								$rows[$row_key][$key] = $row;
+
+								$row_dimensions = $this->cli_get_table_cell_dimensions($row);
+
+								if($row_dimensions['x'] > $key_lengths[$key]){
+									$key_lengths[$key] = $row_dimensions['x'];
+								}
+
+								if(!isset($row_heights[$row_key]) || $row_dimensions['y'] > $row_heights[$row_key]){
+									$row_heights[$row_key] = $row_dimensions['y'];
+								}
+							}
+						}
+
+						$this->cli_print_table_border($keys, $key_lengths);
+						if($print_header){
+							$this->cli_print_table_row($header, $header_height, $key_lengths);
+							$this->cli_print_table_border($keys, $key_lengths);
+						}
+						
+
+						foreach($rows as $row_key => $row){
+							$this->cli_print_table_row($row, $row_heights[$row_key], $key_lengths);
+						}
+						$this->cli_print_table_border($keys, $key_lengths);
+					}
+				}
+				else{
+
+				}
+			}			
+		}
+
+		public function cli_print_table_border($keys, $key_lengths){
+			echo '+';
+			foreach($keys as $key){
+				for($x = 0; $x < $key_lengths[$key]+2; $x++){
+					echo '-';
+				}
+				echo '+';
+			}
+			echo "\n";
+		}
+
+		public function cli_print_table_row($columns, $height, $key_lengths){
+
+			$rows = [];
+
+			foreach($columns as $key => $column){
+
+				if(is_object($column) || is_array($column)){
+					ob_start();
+					$this->cli_print_table($column);
+					$column = ob_get_clean();
+				}
+
+				$lines = explode("\n", $column);
+
+				for($x = 0; $x < $height; $x++){
+
+					$str = '|';					
+
+					if(isset($lines[$x])){
+						$line = $lines[$x];
+					}
+					else{
+						$line = "";
+					}
+
+					$original_length = strlen($line);
+					$strip_length = strlen($this->cli_strip_format($line));
+					$diff = $original_length-$strip_length;
+					$str .= " ".str_pad($line, $key_lengths[$key]+$diff)." ";
+
+					$rows[$x][] = $str;
+				}
+			}
+
+			foreach($rows as $row_key => $row){
+				$row = implode("", $row)."|\n";
+				echo $this->cli_format_output($row);
+			}
+
+		}
+
+		public function cli_get_table_cell_dimensions($data){
+
+			$x = 0;
+			$y = 0;
+
+			if(is_string($data)){
+				$lines = explode("\n", $data);
+				$y = count($lines);
+
+				foreach($lines as $line){
+
+					$original_length = strlen($line);
+					$strip_length = strlen($this->cli_strip_format($line));
+					$diff = $original_length-$strip_length;
+
+					if($strip_length > $x){
+						$x = $strip_length;
+					}
+				}
+			}
+
+			elseif(is_object($data) || is_array($data)){
+				ob_start();
+				$this->cli_print_table($data);
+				$data = ob_get_clean();
+				return $this->cli_get_table_cell_dimensions($data);
+			}
+
+			return ['x' => $x, 'y' => $y];
+
+		}
+
+		public function cli_strip_format($text = null){
+			$search = [
+				'<cli:b>',
+				'</cli:b>'
+			];
+			$replacements = [
+				"",
+				""
+			];
+			
+			if(is_string($text)){
+				$text = str_replace($search, $replacements, $text);
+			}
+			elseif(is_array($text) || is_object($text)){
+
+				foreach($text as $k => $v){
+					$text[$k] = $this->cli_format_output($v);
+				}
+			}
+
+			return $text;
+		}
+
+		public function cli_format_output($text = null){
+
+			$search = [
+				'<cli:b>',
+				'</cli:b>'
+			];
+			$replacements = [
+				"\033[1m",
+				"\033[0m"
+			];
+			
+			if(is_string($text)){
+				$text = str_replace($search, $replacements, $text);
+			}
+			elseif(is_array($text) || is_object($text)){
+
+				foreach($text as $k => $v){
+					$text[$k] = $this->cli_format_output($v);
+				}
+			}
+
+			return $text;
 		}
 	}
 
-	new CLI($argv);
+	new SparkCLI($argv);
 ?>

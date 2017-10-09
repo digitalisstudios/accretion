@@ -47,10 +47,53 @@
 					$file_name = pathinfo($helper_path)['filename'];
 					Helper::$helper_names[Controller::format_url($file_name)] = $helper_path;
 				}
-			}
 
+				//FIND THE THE HELPERS
+				foreach(glob(HELPER_PATH.'*_Extension.php') as $helper_path){
+					$file_name = pathinfo($helper_path)['filename'];
+					Helper::$helper_names[str_replace('-extension', '', Controller::format_url($file_name))] = $helper_path;
+				}
+			}
 		}
 
-		
+		public function helper_name(){
+			return str_replace('_Helper', '', get_class($this));
+		}
+
+		public function load_helper_view($view){
+
+			$name = $this->helper_name();
+
+			$paths = [				
+				HELPER_PATH.$name.'/'.$view.'.php',
+				HELPER_PATH.str_replace('_Extension', '', $name).'/'.$view.'.php',
+				SYSTEM_HELPER_PATH.str_replace('_Extension', '', $name).'/'.$view.'.php',
+			];
+
+			foreach($paths as $path){
+				if(file_exists($path)){
+					include $path;
+					break;
+				}
+			}
+		}
+
+		public function load_helper_partial($view){
+
+			$name = $this->helper_name();
+
+			$paths = [
+				HELPER_PATH.$name.'/partial/'.$view.'.php',
+				HELPER_PATH.str_replace('_Extension', '', $name).'/partial/'.$view.'.php',				
+				SYSTEM_HELPER_PATH.str_replace('_Extension', '', $name).'/partial/'.$view.'.php',				
+			];
+
+			foreach($paths as $path){
+				if(file_exists($path)){
+					include $path;
+					break;
+				}
+			}
+		}		
 	}	
 ?>

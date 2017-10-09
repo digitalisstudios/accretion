@@ -3,22 +3,41 @@
 
 		private $_data;
 		private $_prefix;		
-		public $rules;						// Rule storage
-		public $error;						// Error storage
-		public $print_errors = true;		// Toggle using $this->print_errors(bool);
-		public $print_field_title = true;	// Toggle using $this->print_titles(bool);
-		public $error_class = 'has-error';
+		public $rules;							// Rule storage
+		public $error;							// Error storage
+		public $print_errors 		= true;		// Toggle using $this->print_errors(bool);
+		public $print_field_title 	= true;		// Toggle using $this->print_titles(bool);
+		public $error_class 		= 'has-error';
+		public $force_false 		= false;
+		public $_validators 		= [
+			'_validate_reqd',
+			'_validate_setreqd',
+			'_validate_reqfield',
+			'_validate_max',
+			'_validate_min',
+			'_validate_exact',
+			'_validate_match',
+			'_validate_in_array',
+			'_validate_min_date',
+			'_validate_max_date',
+			'_validate_force',
+			'_validate_alpha',
+			'_validate_numeric',
+			'_validate_money',
+			'_validate_numeric_thousands',
+			'_validate_alphanumeric',
+			'_validate_no_space',
+			'_validate_email',
+			'_validate_phone',
+			'_validate_date',
+			'_validate_time',
+			'_validate_cond'
+		];
 
 		public function __construct(){
 
 		}
 
-		/**
-		 * Set validation rules
-		 * Will merge over previously set rules
-		 * @param array $rules
-		 * @return bool
-		 */
 		public function add_rules($rules)
 		{
 			if(is_array($rules))
@@ -34,13 +53,6 @@
 			}
 			return TRUE;
 		}
-
-		/**
-		 * Run validation
-		 * @param array $data
-		 * @param array $rules
-		 * @return bool
-		 */
 		public function run($data, $rules = NULL)
 		{
 			// Optional rules
@@ -69,15 +81,23 @@
 			return empty($this->error);
 		}
 
+		public function register_validators($validators = []){
 
+			if(is_string($validators) && method_exists($this, $validators)){
+				$this->_validators[$validator] = $validator;
+			}
+			elseif(is_array($validators)){
+				foreach($validators as $validator){
+					$this->register_validators($validator);
+				}
+			}
 
-		/**
-		 * Run field validation
-		 * @param string $field_name
-		 * @return bool
-		 */
-		private function check_field($field_name)
-		{
+			return $this;
+			
+		}
+
+		private function check_field($field_name){
+
 			$this->data_copy = $this->_data;
 
 			$field = $this->get_value($field_name);
@@ -85,162 +105,352 @@
 			$this->data_copy[$field_name] = $field;
 
 			$field = trim($this->data_copy[$field_name]);
-			if(is_array($this->data_copy[$field_name]))
-			{
+			if(is_array($this->data_copy[$field_name])){
+				
 				// If it is a checkbox array
-				foreach($this->data_copy[$field_name] as $k=>$v)
-				{
-					if(!empty($v))
-					{
+				foreach($this->data_copy[$field_name] as $k=>$v){
+					if(!empty($v)){
 						$this->data_copy[$field_name] = trim($v);
 					}
 				}
-			}else{
+			}
+			else{
 				// Regular string data
 				$this->data_copy[$field_name] = trim($this->data_copy[$field_name]);
 			}
 
 			// Loop through each rule
-			foreach($this->rules[$field_name] as $type => $error)
-			{
-				// Required
-				if($type == 'reqd' && empty($field) && strlen($field) == 0)
-				{
-					$this->error[$field_name][] = $error;
-				}
-				// Max length
-				if(preg_match('/max\[(\d+)\]/i', $type, $m))
-				{
+			foreach($this->rules[$field_name] as $type => $error){
+				
+				foreach($this->_validators as $validator){
+					if(method_exists($this, $validator)){
+						
 
-				if(strlen($field) > $m[1])
-					{
-						$this->error[$field_name][] = $error;
-					}
-				}
-				// Min length
-				if(preg_match('/min\[(\d+)\]/i', $type, $m))
-				{
-					if(strlen($field) < $m[1])
-					{
-						$this->error[$field_name][] = $error;
-					}
-				}
-				// Exact length
-				if(preg_match('/exact\[(\d+)\]/i', $type, $m))
-				{
-					if(strlen($field) != $m[1])
-					{
-						$this->error[$field_name][] = $error;
-					}
-				}
-				// Confirm
-				if(preg_match('/match\[(.*?)\]/i', $type, $m))
-				{
-					if($field != $this->data[$m[1]])
-					{
-						$this->error[$field_name][] = $error;
-					}
-				}
-
-				//VALIDATE IN ARRAY
-				if(preg_match('/in_array\[(.*?)\]/i', $type, $m)){
-					preg_match('/\[(.*?)\]/i', $type, $m);
-					$check_arr = json_decode($m[0]);
-					if(!in_array($field, $check_arr)){
-						$this->error[$field_name][] = $error;
-					}
-				}
-
-				//VALIDATE MIN DATE
-				if(preg_match('/min_date\[(.*?)\]/i', $type, $m)){
-					if(date('Y-m-d', strtotime($m[1])) > date('Y-m-d', strtotime($field))){
-						$this->error[$field_name][] = $error;
-					}
-				}
-
-				//VALIDATE MIN DATE
-				if(preg_match('/min_date\[(.*?)\]/i', $type, $m)){
-					if(date('Y-m-d', strtotime($m[1])) > date('Y-m-d', strtotime($field))){
-						$this->error[$field_name][] = $error;
-					}
-				}
-
-				if($type == 'force'){
-					$this->error[$field_name][] = $error;
-				}
-
-				// Alpha
-				if($type == 'alpha' && !ctype_alpha(str_replace(' ', '', $field)))
-				{
-					$this->error[$field_name][] = $error;
-				}
-				// Numeric
-				if($type == 'numeric' && !ctype_digit(str_replace('.', '', $field)))
-				{
-					$this->error[$field_name][] = $error;
-				}
-				// Money
-				if($type == 'money' && !ctype_digit(str_replace('$', '', str_replace(',', '', str_replace('.', '', $field)))))
-				{
-					$this->error[$field_name][] = $error;
-				}
-				// Numeric with thousands
-				if($type == 'numeric_thousands' && !ctype_digit(str_replace(',', '', $field)))
-				{
-					$this->error[$field_name][] = $error;
-				}
-				// Alphanumeric
-				if($type == 'alphanumeric' && !ctype_alnum(str_replace(' ', '', $field)))
-				{
-					$this->error[$field_name][] = $error;
-				}
-				// No spaces
-				if($type == 'no_space' && $field != str_replace(' ', '', $field))
-				{
-					$this->error[$field_name][] = $error;
-				}
-				// Email
-				if($type == 'email' && !eregi("^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$", $field))
-				{
-					$this->error[$field_name][] = $error;
-				}
-				// Date (5/10/09)(05/10/2009)
-				if($type == 'date' && strtotime($field) === FALSE)
-				{
-					$this->error[$field_name][] = $error;
-				}
-				// Time
-				if($type == 'time' && !eregi('^([0-1]{1})?([0-9]{1}):([0-5]{1})([0-9]{1})( )?([AaPp][Mm])$', $field))
-				{
-					$this->error[$field_name][] = $error;
-				}
-				// Conditional
-				if(substr($type, 0, 4) == 'cond' && empty($field))
-				{
-					if($type == 'cond')
-					{
-						$conditional = true;
-					}else{
-						$cond_statement = preg_match('/cond\[(.*)=(.*)\]/i', $type, $m);
-						if($cond_statement)
-						{
-							if($this->data[$m['1']] != $m['2'])
-							{
-								$conditional = true;
-							}else{
-								$this->error[$field_name][] = $error;
-							}
+						if(!$this->$validator($field, $field_name, $type)){
+							
+							$this->error[$field_name][] = $error;
 						}
 					}
 				}
 			}
 
-			// Conditional rules
-			if($conditional == true)
-			{
-				unset($this->error[$field_name]);
-			}
 			return TRUE;
+		}
+
+		public function _validate_reqd($field, $field_name, $type){
+
+			// Required
+			if($type == 'reqd' && empty($field) && strlen($field) == 0){
+				return false;
+			}
+
+			return true;
+
+		}
+
+		public function _validate_setreqd($field, $field_name, $type){
+			
+			// Required Only if isset
+			if($type == 'setreqd' && empty($field) && strlen($field) == 0){
+				if(isset($this->_data[$field_name])){				
+					return false;
+				}				
+			}
+
+			return true;
+
+		}
+
+		public function _validate_reqfield($field, $field_name, $type){
+
+			if(preg_match('/reqfield\[(.*)\]/i', $type, $m)){
+
+				if(isset($this->rules[$field_name]['setreqd'])){
+					if(!isset($this->_data[$field_name])){
+						return true;
+					}
+				}
+				
+				return $this->_validate_reqd($this->_data[$m[1]], $m[1], 'reqd');				
+			}
+
+			return true;
+
+		}
+
+		public function _validate_max($field, $field_name, $type){
+
+			// Max length
+			if(preg_match('/max\[(\d+)\]/i', $type, $m)){
+
+				if(strlen($field) > $m[1]){
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		public function _validate_min($field, $field_name, $type){
+
+			// Min length
+			if(preg_match('/min\[(\d+)\]/i', $type, $m)){
+				if(strlen($field) < $m[1]){
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		public function _validate_exact($field, $field_name, $type){
+
+			// Exact length
+			if(preg_match('/exact\[(\d+)\]/i', $type, $m)){
+				if(strlen($field) != $m[1]){
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		public function _validate_match($field, $field_name, $type){
+
+			// Confirm
+			if(preg_match('/match\[(.*?)\]/i', $type, $m)){
+				if($field != $this->data[$m[1]]){
+					return false;
+				}
+			}
+
+			return true;
+
+		}
+
+		public function _validate_in_array($field, $field_name, $type){
+
+			//VALIDATE IN ARRAY
+			if(preg_match('/in_array\[(.*?)\]/i', $type, $m)){
+				preg_match('/\[(.*?)\]/i', $type, $m);
+				$check_arr = json_decode($m[0]);
+				if(!in_array($field, $check_arr)){
+					if(strlen($field) > 0){
+						return false;
+					}
+				}
+			}
+
+			return true;
+
+		}
+
+		public function _validate_min_date($field, $field_name, $type){
+
+			//VALIDATE MIN DATE
+			if(preg_match('/min_date\[(.*?)\]/i', $type, $m)){
+				if(date('Y-m-d', strtotime($m[1])) >= date('Y-m-d', strtotime($field))){
+					if(strlen($field) > 0){
+						return false;
+					}
+				}
+			}
+
+			return true;
+		}
+
+		public function _validate_max_date($field, $field_name, $type){
+
+			//VALIDATE MIN DATE
+			if(preg_match('/max_date\[(.*?)\]/i', $type, $m)){
+				if(date('Y-m-d', strtotime($m[1])) <= date('Y-m-d', strtotime($field))){
+					if(strlen($field) > 0){
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
+		public function _validate_force($field, $field_name, $type){
+
+			//FORCE AN ERROR
+			if($type == 'force'){
+				return false;
+			}
+
+			return true;
+
+		}
+
+		public function _validate_alpha($field, $field_name, $type){
+
+			// Alpha
+			if($type == 'alpha' && !ctype_alpha(str_replace(' ', '', $field))){
+				if(strlen($field) > 0){
+					return false;
+				}
+			}
+
+			return true;
+
+		}
+
+		public function _validate_numeric($field, $field_name, $type){
+
+			// Numeric
+			if($type == 'numeric' && !ctype_digit(str_replace('.', '', $field))){
+				if(strlen($field) > 0){
+					return false;
+				}
+			}
+
+			return true;
+
+		}
+
+		public function _validate_money($field, $field_name, $type){
+
+			// Money
+			if($type == 'money' && !ctype_digit(str_replace('$', '', str_replace(',', '', str_replace('.', '', $field))))){
+				if(strlen($field) > 0){
+					return false;
+				}
+			}
+
+			return true;
+
+		}
+
+		public function _validate_numeric_thousands($field, $field_name, $type){
+
+			// Numeric with thousands
+			if($type == 'numeric_thousands' && !ctype_digit(str_replace(',', '', $field))){
+				if(strlen($field) > 0){
+					return false;
+				}
+			}
+
+			return true;
+
+		}
+
+		public function _validate_alphanumeric($field, $field_name, $type){
+
+			// Alphanumeric
+			if($type == 'alphanumeric' && !ctype_alnum(str_replace(' ', '', $field))){
+				if(strlen($field) > 0){
+					return false;
+				}
+			}
+
+			return true;
+
+		}
+
+		public function _validate_no_space($field, $field_name, $type){
+
+			// No spaces
+			if($type == 'no_space' && $field != str_replace(' ', '', $field)){
+
+				if(strlen($field) > 0){
+					return false;
+				}
+			}
+
+			return true;
+
+		}
+
+		public function _validate_email($field, $field_name, $type){
+
+			// Email
+			//if($type == 'email' && !preg_match("/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$/", $field)){
+			if($type == 'email' && !filter_var($field, FILTER_VALIDATE_EMAIL)){
+				//if(strlen($field) > 0){
+					return false;
+				//}
+			}
+
+			return true;
+
+		}
+
+		public function _validate_phone($field, $field_name, $type){
+
+			$field = trim($field);
+
+			//return true;
+
+			//VALIDATE A PHONE NUMBER
+			if($type == 'phone' && !preg_match("/^(?:(?:\+?[0-9]|[0-9][0-9]|1[0-9][0-9]|2[0-9][0-9]|3[0-9][0-9]|4[0-9][0-9]|5[0-9][0-9]|6[0-9][0-9]|7[0-9][0-9]|8[0-9][0-9]|9[0-9][0-9]\s*(?:[.-]\s*)?)?(?:\(\s*([0-9]1[0-9]|[0-9][0-9]1|[0-9][0-9][0-9])\s*\)|([0-9]1[0-9]|[0-9][0-9]1|[0-9][0-9][0-9]))\s*(?:[.-]\s*)?)?([0-9]1[0-9]|[0-9][0-9]1|[0-9][0-9]{2})\s*(?:[.-]\s*)?([0-9]{4})(?:\s*(?:#|x\.?|ext\.?|extension)\s*(\d+))?$/", $field)){
+				if(strlen($field) > 0){
+					return false;
+				}
+			}
+
+			return true;
+
+		}
+
+		public function _validate_date($field, $field_name, $type){
+
+			// Date (5/10/09)(05/10/2009)
+			if($type == 'date' && strtotime($field) === FALSE){
+
+				if(strlen($field) > 0){
+					return false;
+				}
+			}
+
+			return true;
+
+		}
+
+		public function _validate_time($field, $field_name, $type){
+
+			// Time
+			if($type == 'time' && !preg_match('/^([0-1]{1})?([0-9]{1}):([0-5]{1})([0-9]{1})( )?([AaPp][Mm])$/', $field)){
+				if(strlen($field) > 0){
+					return false;
+				}
+			}
+
+			return true;
+
+		}
+
+		public function _validate_cond($field, $field_name, $type){
+
+
+
+			// Conditional
+			if(substr($type, 0, 4) == 'cond' && empty($field)){
+
+				//pr($this->rules[$field_name]['cond']);
+
+				$conditions = $this->rules[$field_name]['cond'];
+				unset($this->rules[$field_name]['cond']);
+				$this->rules[$field_name]['temp_cond'] = $conditions;
+
+				foreach($conditions as $condition => $condition_statements){
+
+					$cond_statement = preg_match('/cond\[(.*)=(.*)\]/i', $condition, $m);
+
+					if($cond_statement){
+
+						if($this->_data[$m[1]] == $m[2]){
+							foreach($condition_statements as $statement_type => $statement){
+								$this->rules[$field_name][$statement_type] = $statement;
+							}
+						}
+					}
+				}
+
+				return $this->check_field($field_name);
+			}
+
+			return true;
 		}
 
 		public function set_error_class($name){
@@ -269,9 +479,9 @@
 			return false;
 		}
 
-
-
 		public function get_value($field_name, $arr = false){
+
+
 
 			if($arr === false){
 				$arr = $this->_data;
@@ -282,6 +492,8 @@
 				$first_part = $parts[0];
 				unset($parts[0]);
 				$string = implode('.', $parts);
+
+
 
 				if(isset($arr[$first_part])){
 					return $this->get_value($string, $arr[$first_part]);
@@ -314,93 +526,155 @@
 			return $value;
 		}
 
-		
-
-		public function text_field($field_name, $attributes = array()){
-			?>
-				<input type="text" name="<?=$this->field_name($field_name)?>" <?=$this->parse_attributes($attributes)?> value="<?=$this->get_value($field_name)?>">
-				<? if(isset($this->error[$field_name])): ?>
-					<span class="help-block">
-						<?=$this->error[$field_name][0]?>
-					</span>
-				<? endif; ?>
-			<?
-
+		public function temp_val($val){
+			$this->_temp_val = $val;
+			return $this;
 		}
 
-		public function password($field_name, $attributes = array()){
-			?>
-				<input type="password" name="<?=$this->field_name($field_name)?>" <?=$this->parse_attributes($attributes)?> value="<?=$this->get_value($field_name)?>">
-				<? if(isset($this->error[$field_name])): ?>
-					<span class="help-block">
-						<?=$this->error[$field_name][0]?>
-					</span>
-				<? endif; ?>
-			<?
+		public function parse_field_name($field_name){
+			$field_name = str_replace(']', '', str_replace('][', '.', $field_name));
 
+			if($this->_prefix !== ""){
+				$field_name = str_replace($this->_prefix."[", "", $field_name);
+			}
+
+			return $field_name;
+		}
+
+		public function render_error($field_name){
+			
+			if(strpos($field_name, "[")){
+				$field_name = $this->parse_field_name($field_name);
+			}
+
+			if(isset($this->error[$field_name])): ?>
+				<span class="help-block">
+					<?=$this->error[$field_name][0]?>
+				</span>
+			<? endif;
+		}
+
+		public function render_field($field_name, $attributes = [], $callback){
+
+			$multi = '';
+			if(isset($attributes['multiple']) && $attributes['multiple'] == 'true'){
+				$multi = '[]';	
+			}
+
+			$actual_field_name 	= $field_name;
+			$field_name 		= $this->field_name($field_name);
+			$parsed_field_name 	= $this->parse_field_name($field_name);
+			$attributes 		= $this->parse_attributes($attributes);
+			$value 				= $this->get_value($actual_field_name);
+			$meta 				= " name=".$field_name.$multi." ".$attributes;
+
+			$callback($meta, $value);
+
+			$this->render_error($field_name);
+		}
+
+		public function input($type, $field_name, $attributes = [], $value = null){
+			$data = ['type' => $type, 'value' => $value, 'field_name' => $field_name];
+			$this->render_field($field_name, $attributes, function($meta, $value) use ($data) {
+				?><input type="<?=$data['type']?>" <?=$meta?> value="<?=!is_null($data['value']) ? $data['value'] : $value?>" <?=in_array($data['type'], ['checkbox','radio']) && $data['value'] == $this->get_value($data['field_name']) ? 'checked' : '' ?>><?
+			});
+		}
+
+		public function text_field($field_name, $attributes = []){
+
+			$this->render_field($field_name, $attributes, function($meta, $value){
+				?><input type="text" <?=$meta?> value="<?=$value?>"><?
+			});
+		}
+
+		public function password($field_name, $attributes = []){
+
+			$this->render_field($field_name, $attributes, function($meta, $value){
+				?><input type="password" <?=$meta?> value="<?=$value?>"><?
+			});
 		}
 
 		public function email($field_name, $attributes = array()){
-			?>
-				<input type="email" name="<?=$this->field_name($field_name)?>" <?=$this->parse_attributes($attributes)?> value="<?=$this->get_value($field_name)?>">
-				<? if(isset($this->error[$field_name])): ?>
-					<span class="help-block">
-						<?=$this->error[$field_name][0]?>
-					</span>
-				<? endif; ?>
-			<?
 
+			$this->render_field($field_name, $attributes, function($meta, $value){
+				?><input type="email" <?=$meta?> value="<?=$value?>"><?
+			});
 		}
 
 		public function number($field_name, $attributes = array()){
-			?>
-				<input type="number" name="<?=$this->field_name($field_name)?>" <?=$this->parse_attributes($attributes)?> value="<?=$this->get_value($field_name)?>">
-				<? if(isset($this->error[$field_name])): ?>
-					<span class="help-block">
-						<?=$this->error[$field_name][0]?>
-					</span>
-				<? endif; ?>
-			<?
 
+			$this->render_field($field_name, $attributes, function($meta, $value){
+				?><input type="number" <?=$meta?> value="<?=$value?>"><?
+			});
 		}
 
 		public function hidden($field_name, $attributes = array()){
 
-			?>
-				<input type="hidden" name="<?=$this->field_name($field_name)?>" <?=$this->parse_attributes($attributes)?> value="<?=$this->get_value($field_name)?>">
-			<?
-
+			$this->render_field($field_name, $attributes, function($meta, $value){
+				?><input type="hidden" <?=$meta?> value="<?=$value?>"><?
+			});
 		}
 
 		public function textarea($field_name, $attributes = array()){
-			?>
-				<textarea name="<?=$this->field_name($field_name)?>" <?=$this->parse_attributes($attributes)?>><?=$this->get_value($field_name)?></textarea>
-			<?
+
+			$this->render_field($field_name, $attributes, function($meta, $value){
+				?><textarea <?=$meta?>><?=$value?></textarea><?
+			});
 		}
 
+		public function multi_select($field_name, $options = [], $attributes = [], $use_key = false){
+			$attributes['multiple'] = 'true';
+			$data = [
+				'options' => $options,
+				'use_key' => $use_key
+			];
 
+			//$this->_extra_prefix = "[]";
+
+			$this->render_field($field_name, $attributes, function($meta, $value) use ($data) {
+
+				$options 	= $data['options'];
+				$use_key 	= $data['use_key'];
+				$vals 		= $value;
+				?>
+					<select <?=$meta?>>
+						<? foreach($options as $k => $v): ?>
+							<? !$use_key ? $k = $v : $k = $k; ?>
+							<? if($use_key): ?>
+								<option value="<?=$k?>" <?=isset($vals[$k]) ? 'selected' : ''?> ><?=$v?></option>	
+							<? else: ?>
+								<option value="<?=$k?>" <?=in_array($k, $vals) ? 'selected' : ''?> ><?=$v?></option>
+							<? endif; ?>							
+						<? endforeach; ?>
+					</select>
+				<?
+			});
+		}
 
 		public function select($field_name, $options = array(), $attributes = array(), $use_key = false){
-			
-			$actual_field_name = $this->field_name($field_name);
-			$val = $this->get_value($field_name);				
-			?>
-				<select name="<?=$actual_field_name?>" <?=$this->parse_attributes($attributes)?>>
-					<? foreach($options as $k => $v): ?>
-						<? !$use_key ? $k = $v : $k = $k; ?>
-						<? if($use_key && $k == 'false' && $val == '') $val = 'false' ?> 
-						<option value="<?=$k?>" <?=$k == $val ? 'selected' : ''?> ><?=$v?></option>
-					<? endforeach; ?>
-				</select>
 
-				<? if(isset($this->error[$field_name])): ?>
-					<span class="help-block">
-						<?=$this->error[$field_name][0]?>
-					</span>
-				<? endif; ?>
-			<?
+			$this->temp_options = $options;
+			$this->temp_use_key = $use_key;
 
+			$this->render_field($field_name, $attributes, function($meta, $value){
 
+				$options 	= $this->temp_options;
+				$use_key 	= $this->temp_use_key;
+				$val 		= $value;
+
+				?>
+					<select <?=$meta?>>
+						<? foreach($options as $k => $v): ?>
+							<? !$use_key ? $k = $v : $k = $k; ?>
+							<? if($use_key && $k == 'false' && $val == '') $val = 'false' ?> 
+							<option value="<?=$k?>" <?=$k == $val ? 'selected' : ''?> ><?=$v?></option>
+						<? endforeach; ?>
+					</select>
+				<?
+
+				unset($this->temp_options);
+				unset($this->temp_use_key);
+			});
 		}
 
 		public function checkbox($field_name, $value = 'true', $attributes = array()){
@@ -443,6 +717,9 @@
 
 		public function prefix($str = ""){
 			$this->_prefix = $str;
+			if($this->_prefix == ""){
+				unset($this->_prefix);
+			}
 			return $this;
 		}
 
@@ -508,6 +785,10 @@
 			return $this->_data;
 		}
 
+		public function force_false(){
+			$this->force_false = true;
+			return $this;
+		}
 
 
 		public function field_name($field_name){
@@ -572,6 +853,10 @@
 				$ret[$x] = $x;
 			}
 			return $ret;
+		}
+
+		public function form_group($field_name, $attributes = array()){
+			return new Validate_Form_Group($this, $field_name, $attributes);
 		}
 
 		public function country(){
@@ -665,6 +950,80 @@
 			}else{
 				return $states;
 			}
+		}
+	}
+
+	class Validate_Form_Group extends Validate_Helper {
+		
+		public $validator;
+		public $field_name;
+		
+		public function __construct($validator, $field_name, $attributes = array()){
+			$this->validator = $validator;
+			$this->field_name = $field_name;
+			if(isset($attributes['class'])){
+				$attributes['class'] = trim($attributes['class'].' form-group');
+			}
+			else{
+				$attributes['class'] = "form-group";
+			}
+
+			if($this->validator->has_error($field_name)){
+				$attributes['class'] = trim($attributes['class'].' has-error');
+			}
+			?>
+				<div <?=$this->parse_attributes($attributes)?>>
+			<?
+		}
+
+		
+
+		public function label($label, $attributes = array()){
+			?>
+				<label <?=$this->parse_attributes($attributes)?>>
+				<?=$label?>
+				</label>
+			<?
+			return $this;
+		}
+
+		public function div($attributes = array(), $callback){
+			?>
+				<div <?=$this->parse_attributes($attributes)?>>
+					<? $callback($this) ?>
+				</div>
+				</div>
+			<?
+
+			return $this;
+		}
+
+		public function text_field($attributes = array()){
+			return $this->validator->text_field($this->field_name, $attributes);
+		}
+
+		public function textarea($attributes = array()){
+			return $this->validator->textarea($this->field_name, $attributes);
+		}
+
+		public function select($options = array(), $attributes = array(), $use_key = false){
+			return $this->validator->select($this->field_name, $options, $attributes, $use_key);
+		}
+
+		public function radio($field_value, $attributes = array()){
+			return $this->validator->radio($this->field_name, $field_value, $attributes);
+		}
+
+		public function password($attributes = array()){
+			return $this->validator->password($this->field_name, $attributes);
+		}
+
+		public function hidden($attributes = array()){
+			return $this->validator->hidden($this->field_name, $attributes);
+		}
+
+		public function checkbox($value = 'true', $attributes = array()){
+			return $this->validator->checkbox($this->field_name, $value, $attributes);
 		}
 	}
 ?>
