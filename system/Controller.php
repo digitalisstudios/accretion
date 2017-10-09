@@ -2,6 +2,8 @@
 	
 	class Controller extends Accretion {
 
+		public static $_loader_vars = [];
+
 		public function __construct(){
 
 		}
@@ -9,20 +11,19 @@
 //----------------------------------// GLOBAL CONTROLLER METHODS //-------------------------//
 
 		//LOAD A CONTROLLER AND OPTIONAL TEMPLATE
-		public static function get($controller = false, $template = false){
+		public static function get($controller = false){
 			
 			//FORCE THE CONTROLLER
-			$controller 					= $controller === false ? Controller::parse_from_request() : Controller::parse_controller_path($controller);
+			$controller 					= $controller === false ? Controller::parse_from_request() : Controller::parse_from_request($controller);
 
 			//IF NO CONTROLLER PUT OUT 404 ERROR
 			if(is_null($controller)) \Request::error(404);			
 
 			//SET TEMPLATE AND CONTROLLER VARSs
 			$template_path 					= $controller->get_controller_template_path();
-			$template 						= $template === false ? $controller->get_requested_template() : $template;
+			$template 						= $controller->get_requested_template();
 			Accretion::$controller 			= $controller;
-			Accretion::$controller_name 	= str_replace('_Controller', '', get_class($controller));
-
+			Accretion::$controller_name 	= get_class($controller);
 			Accretion::$template_name 		= $template;
 			Accretion::$template_path 		= $template_path;
 			
@@ -56,11 +57,25 @@
 			//WE HAVE TO CALL THE VIEW METHOD DYNAMICALLY TO SOLVE INHERITANCE ISSUES
 			else{
 				View::$view_loaded = false;
-				Accretion::$controller->load_controller_view();
+				Accretion::$controller->load_controller_view($template);
 			}
 			
 			//SEND BACK THE CONTROLLER
 			return Accretion::$controller;
+		}
+
+		public static function backup_loader_vars(){
+
+			$vars = ['controller','method_name','template_name','template_path'];
+
+			foreach($vars as $var) Controller::$_loader_vars[$var] = Accretion::$$var; 
+		}
+
+		public static function reset_loader_vars(){
+
+			foreach(Controller::$_loader_vars as $k => $v) Accretion::$$k = $v;
+
+			Controller::$_loader_vars = [];
 		}
 
 		//FORMAT THE URL
@@ -82,8 +97,7 @@
 			//REMOVE THE FIRST PART IF THERE IS MORE THAN ONE PART
 			if(count($post_controller) > 1){
 				unset($post_controller[0]);
-			}
-			
+			}			
 
 			//SET THE NEW PATH
 			$post_controller 	= Controller::format_url(implode('/', $post_controller));
@@ -100,8 +114,18 @@
 		//GET THE CONTROLLER FROM THE REQUEST
 		public static function parse_from_request($key = 0){
 
-			//SET DEFAULTS
-			$parts 			= Request::get();
+			//CHECK FOR PATH 
+			if(is_string($key) && strlen($key) > 0){
+				$parts 		= explode('/', $key);
+				$key 		= 0;
+			}
+
+			//NO PATH WAS PASSED
+			else{
+				$parts 		= Request::get();
+			}
+			
+			//INIT THE PATH PARTS
 			$path_parts 	= array();
 
 			//USE THE DEFAULT CONTROLLER IF NEEDED
@@ -138,7 +162,7 @@
 					$name 				= 'Controller\\'.str_replace('/', '\\', str_replace(CONTROLLER_PATH, '', dirname($controller_path).'/')).$controller_name;
 
 					//START A REFLECTOR
-					$reflect 			= in_array($name, get_declared_classes()) ? new ReflectionClass($name) : new ReflectionClass($controller_name.'_Controller');							
+					$reflect 			= new ReflectionClass($name);							
 
 					//REFLECT THE CONTROLLER
 					$controller 		= $reflect->newInstanceWithoutConstructor()->reflect_controller();
@@ -168,42 +192,6 @@
 
 			//SEND BACK THE CONTROLLER
 			return $controller;			
-		}
-
-		//METHOD FOR PARSING CONTROLLER PATHS (User/Sub_Controller/Another/10)
-		public static function parse_controller_path($path){
-			
-			//SET THE PATH
-			$path = CONTROLLER_PATH.$path;
-
-			//GET THE PARTS
-			$parts = explode('/', $path);
-
-			//CYCLE THE PARTS
-			foreach($parts as $k => $part){
-
-				//START THE PART TEMP
-				$part_temp = array();
-
-				//USE UP TO THE CURRENT PART
-				foreach($parts as $x => $temp_part){
-					$part_temp[] = $temp_part;
-					if($x > $k) break;
-				}
-
-				//SET THE SUFFIX
-				$suffix = implode('/', $part_temp);
-
-				//INCLUE THE CONTROLLER
-				include_once CONTROLLER_PATH.$suffix.'.php';
-
-				//START A NEW REFLECTION CLASS
-				$reflect  			= new ReflectionClass($part.'_Controller');
-
-				//REFLECT THE CONTROLLER
-				$controller 		= $reflect->newInstanceWithoutConstructor()->reflect_controller();
-			}
-			return $controller;
 		}
 
 
@@ -275,7 +263,24 @@
 		}
 
 		//LOAD THE VIEW FOR THIS CONTROLLER
-		public function load_controller_view(){
+		public function load_controller_view($template = false){
+
+			if(get_class($this) !== get_class(Accretion::$controller)){
+
+				Controller::backup_loader_vars();
+
+				Accretion::$controller 		= $this;
+				Accretion::$method_name 	= $template !== false ? $template : 'index';
+				Accretion::$template_name 	= Accretion::$method_name;
+				Accretion::$template_path 	= $this->template_path;
+
+				$res = View::get();
+
+				Controller::reset_loader_vars();
+
+				return $res;
+			}
+
 			return View::get();
 		}
 
@@ -416,6 +421,10 @@
 		//GET THE WEB FORMATTED PATH FOR THE TEMPLATE
 		public function get_controller_template_web_path(){
 			return str_replace(VIEW_PATH, '/', $this->get_controller_template_path());
+		}
+
+		public function get_controller_web_path(){
+			return str_replace('.php', '/', str_replace(CONTROLLER_PATH, WEB_APP, $this->get_controller_path()));
 		}		
 
 		//GET THE CONTROLLER NAME

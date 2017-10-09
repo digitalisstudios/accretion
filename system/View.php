@@ -3,6 +3,8 @@
 
 		public static $view_parent = false;
 		public static $view_loaded = false;
+		public static $scripts = [];
+		public static $styles = [];
 
 		public function __construct(){
 			
@@ -18,7 +20,7 @@
 				}
 			}
 
-			$headers 		= (\Request::is_ajax() && (!\Request::get('header') || \Request::get('header') !== 'true')) ? false : $headers;
+			$headers 		= (Request::is_ajax() && (!\Request::get('headers') || \Request::get('headers') !== 'true')) ? false : $headers; 
 			$sub_header 	= (isset(Accretion::$controller->_disable_subheader) && Accretion::$controller->_disable_subheader === true) ? false : $sub_header;
 			$template_path 	= $controller === false ? \Accretion::$template_path : VIEW_PATH.$controller.'/';
 			$template 		= !$template ? \Accretion::$template_name : $template;
@@ -46,7 +48,10 @@
 			if($headers) \View::footer();
 
 			//TURN OFF DISABLE SUBHEADER AFTER RUN
-			\Accretion::$controller->_disable_subheader = false;
+			Accretion::$controller->_disable_subheader = false;
+
+			//SET VIEW LOADED TO BE ON
+			View::$view_loaded = true;
 		}
 
 		public function include_path($paths, $break = true){
@@ -262,10 +267,14 @@
 			View::js(Accretion::$template_name, implode('/', $paths));
 		}
 
+
 		public function js($file_name, $path = false){
 
 			if(validate_url($file_name)){
-				echo "<script src=\"{$file_name}\"></script>";
+				if(!in_array($file_name, View::$scripts)){
+					View::$scripts[] = $file_name;
+					echo "<script src=\"{$file_name}\"></script>";
+				}
 			}
 			else{
 
@@ -277,7 +286,10 @@
 
 				foreach($paths as $path){
 					$web_path = str_replace(VIEW_PATH, WEB_VIEW_PATH, $path);
-					echo "\n<script src=\"{$web_path}?{$time}\"></script>\n";
+					if(!in_array($web_path, View::$scripts)){
+						View::$scripts[] = $web_path;
+						echo "\n<script src=\"{$web_path}?{$time}\"></script>\n";
+					}
 					break;
 				}
 			}			
@@ -285,10 +297,11 @@
 
 		public function css($file_name, $path = false){
 
-
-
 			if(validate_url($file_name)){
-				echo "<link rel=\"stylesheet\" type=\"text/css\" href=\"{$file_name}\">";
+				if(!in_array($file_name, View::$styles)){
+					View::$styles[] = $file_name;
+					echo "<link rel=\"stylesheet\" type=\"text/css\" href=\"{$file_name}\">";
+				}
 			}
 			else{
 				$path 		= $path === false ? Accretion::$controller->controller_template_path : $path;
@@ -299,10 +312,32 @@
 
 				foreach($paths as $path){					
 					$web_path = str_replace(VIEW_PATH, WEB_VIEW_PATH, $path);
-					echo "\n<link rel=\"stylesheet\" type=\"text/css\" href=\"{$web_path}?{$time}\">\n";
+					if(!in_array($web_path, View::$styles)){
+						View::$styles[] = $web_path;
+						echo "\n<link rel=\"stylesheet\" type=\"text/css\" href=\"{$web_path}?{$time}\">\n";
+					}
+					
 					break;
 				}
 			}
+		}
+
+		public static function is($path){
+
+			if(View::local_template_path(true) === Controller::format_url($path)){
+				return true;
+			}
+
+			return false;
+		}
+
+		public static function has($path){
+
+			if(strpos(View::local_template_path(true), Controller::format_url($path)) === 0){
+				return true;
+			}
+
+			return false;
 		}
 
 		//CHECK ON THE LOCAL TEMPLATE PATH
