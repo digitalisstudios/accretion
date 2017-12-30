@@ -90,8 +90,11 @@
 			//GET THE COMPOSER AUTOLOAD
 			if(file_exists(VENDOR_PATH.'autoload.php'))	require_once VENDOR_PATH.'autoload.php';
 
+			
+			//foreach(glob(MODEL_PATH.'*.php') as $model_path) Model::get(pathinfo($model_path)['filename']);
+
 			//AUTOLOAD ALL OF THE MODELS
-			foreach(glob(MODEL_PATH.'*.php') as $model_path) Model::get(pathinfo($model_path)['filename']);
+			Config::load_models();	
 
 			//AUTOLOAD THE SYSTEM HELPERS
 			foreach(glob(SYSTEM_HELPER_PATH.'*.php') as $helper_path) include_once $helper_path;
@@ -102,6 +105,8 @@
 			//SEND BACK THE CONFIG DATA
 			return Config::$data;
 		}
+
+		
 
 		//LOAD THE SERVER CONFIG DATA AND GENERATE THE JSON IF NEEDED
 		public function get_loader_config(){
@@ -135,6 +140,30 @@
 
 			//SEND BACK THE SERVER CONFIG DATA
 			return $server_config;
+		}
+
+		public static function load_models(){
+
+			//SET MODEL NAMES IF NEEDED
+			if(!\Storage::get('_model_names')) foreach(glob(MODEL_PATH.'*.php') as $model_path){
+				\Storage::set('_model_names.'.\Controller::format_url(pathinfo($model_path, PATHINFO_FILENAME)), $model_path);
+
+				$model_name = pathinfo($model_path, PATHINFO_FILENAME);		
+
+				$sub_dir = dirname($model_path).'/'.$model_name.'/';
+
+				if(file_exists($sub_dir) && is_dir($sub_dir)){
+
+					$traits = glob($sub_dir.'*.php');
+
+					if(!empty($traits)) foreach($traits as $trait){
+						include_once $trait;
+					} 
+					
+				}
+
+				include_once $model_path;
+			}
 		}
 
 		//RECURSIVELY PRELOAD ALL OF THE CONTROLLERS
@@ -273,4 +302,3 @@
 			return json_decode(json_encode($data));
 		}
 	}
-?>

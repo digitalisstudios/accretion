@@ -407,4 +407,3 @@
 			Accretion::$method_name = $method_name;
 		}
 	}
-?>

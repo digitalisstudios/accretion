@@ -1,6 +1,8 @@
 <?php
 	class Model_Structure_Helper extends Helper{
 
+		public $_cache;
+
 		public function __construct($model = false){
 			if($model){
 				if(is_array($model)){
@@ -13,10 +15,66 @@
 
 		public function set_model($model){
 			$this->model = $model;
+			$this->db_name = $this->model->db_name();
+			return $this;
+		}
+
+		public function load_cache(){
+
+			$dir = __DIR__.'/Model_Structure/';
+			if(!file_exists($dir)) mkdir($dir, 0755, true);
+
+			if(!file_exists($dir.'cache.json')){
+				
+				$records = [];
+				foreach(glob(MODEL_PATH.'*.php') as $file){
+					$records[pathinfo($file, PATHINFO_FILENAME)] = filemtime($file)-1;
+				}
+
+				$handle = fopen($dir.'cache.json', 'w+');
+				fwrite($handle, json_encode($records));
+				fclose($handle);
+			}
+
+			$this->_cache = json_decode(file_get_contents($dir.'cache.json'), true);
+
+			return $this->_cache;
+		}
+
+		public function needs_update(){
+
+			if(is_null($this->_cache)) $this->load_cache();
+
+			$model_name = $this->model->model_name();
+			$file_path 	= MODEL_PATH.$model_name.'.php';
+			$time 		= filemtime($file_path);
+
+			return (!isset($this->_cache[$model_name]) || isset($this->_cache[$model_name]) && $this->_cache[$model_name] !== $time) ? true : false;
+		}
+
+		public function update_cache(){
+
+			//LOAD THE CACHE IF NEEDED
+			if(is_null($this->_cache)) $this->load_cache();
+
+			//GET SOME VARS
+			$model_name 				= $this->model->model_name();
+			$file_path 					= MODEL_PATH.$model_name.'.php';
+			$time 						= filemtime($file_path);
+			$this->_cache[$model_name] 	= $time;
+			$dir 						= __DIR__.'/Model_Structure/';
+
+			//STORE THE CACHE
+			$handle 					= fopen($dir.'cache.json', 'w+');
+			fwrite($handle, json_encode($this->_cache));
+			fclose($handle);
+
 			return $this;
 		}
 
 		public function model_change($model_name, $change_type, $sql, $rollback){
+
+			/*
 			if(!DB::get_row("SHOW TABLES LIKE 'model_change'")){
 
 				$res = DB::query("
@@ -30,64 +88,65 @@
 						model_change_rolledback ENUM('true','false') DEFAULT 'false'
 					)
 				");
-			}
+			}*/
 
-			DB::insert('model_change', array('model_change_id' => '', 'model_change_type' => $change_type, 'model_name' => $model_name, 'model_change_sql' => $sql, 'model_change_rollback' => $rollback));
+			//DB::insert('model_change', array('model_change_id' => '', 'model_change_type' => $change_type, 'model_name' => $model_name, 'model_change_sql' => $sql, 'model_change_rollback' => $rollback));
 		}
 
 		public function generate_column_sql($field_name, $data){
 			$type 			= $data['Type'];
-			$null 			= isset($data['Null']) && $data['Null'] == 'YES' ? '' : 'NOT NULL';
+			$null 			= isset($data['Null']) && $data['Null'] == 'YES' ? 'NULL' : 'NOT NULL';
 			$key 			= isset($data['Key']) && $data['Key'] == 'PRI' ? 'PRIMARY KEY' : '';
 			$default 		= isset($data['Default']) && $data['Default'] != '' ? "DEFAULT '{$data['Default']}'" : '';
 			$auto_increment = isset($data['Extra']) && $data['Extra'] == 'auto_increment' ? 'AUTO_INCREMENT PRIMARY KEY' : ''; 
 
+			
+
 			if($type == 'timestamp'){
 				$type 		= 'TIMESTAMP';
 				$default 	= isset($data['Default']) && $data['Default'] != '' ? "DEFAULT {$data['Default']}" : '';
-			} 
+			}
 
-			return trim("`{$field_name}` {$type} {$default} {$null} {$key} {$auto_increment}");
+			return trim("`{$field_name}` {$type} {$null} {$default} {$key} {$auto_increment}");
 		}
 
 		public function set_defaults($force){
+			
+			if(!$force && !$this->needs_update()) return false;
+			
 
 			//SET THE MODEL NAME
 			$this->model_name = get_class($this->model);
 
+			$this->db_name = $this->model->db_name();
+
 			//WAS THE TABLE NAME EXPLICITLY DEFINED
-			if(isset($this->model->table_name)){
-				$this->table_name = $this->model->table_name;
+			if(isset($this->model->_table)){
+				$this->_table = $this->model->_table;
 			}
 			else{				
-				$this->table_name = strtolower($this->model_name);
+				$this->_table = strtolower($this->model_name);
 			}
 
 			//IF THE TABLE HAS BEEN CACHED IN THE LAST DAY IGNORE IT
-			if(isset($_SESSION['table_cache'][$this->table_name]) && (strtotime($_SESSION['table_cache'][$this->table_name]) > strtotime('-1 day')) && !$force){				
+			/*if(isset($_SESSION['table_cache'][$this->_table]) && (strtotime($_SESSION['table_cache'][$this->_table]) > strtotime('-1 day')) && !$force){				
 				return false;
-			}
+			}*/
 
 			//CHECK IF THE TABLE EXISTS
-			$tables 				= DB::get_rows("SHOW TABLES");
-			$this->table_exists 	= false;
+			$tables 				= \DB::set($this->db_name)->get_rows("SHOW TABLES");			
+			$key_name = key($tables[0]);
 
-			foreach($tables as $t => $v){
-				foreach($v as $name => $x){
-					break;
-				}
-				break;
-			}
-			
+			$this->table_exists 	= false;
 			foreach($tables as $table){
-				if($this->table_name == $table[$name]){
+				if($this->_table == $table[$key_name]){
 					$this->table_exists = true;
 					break;
 				}
 			}
 
 			//GET THE TABLE STRUCTURE
-			$this->table_structure 	= $this->table_exists ? DB::get_rows("DESCRIBE `{$this->table_name}`") : false;
+			$this->table_structure 	= $this->table_exists ? \DB::set($this->db_name)->get_rows("DESCRIBE `{$this->_table}`") : false;
 
 			//GET THE MODEL STRUCTURE
 			$this->model_structure 	= isset($this->model->structure) ? $this->model->structure : false;
@@ -103,13 +162,9 @@
 			if(!in_array('Model', $parents)) return $this;
 
 			//ALLOW URL FORCING
-			if(isset($_GET['model_sync'])){
-				$force = true;
-			}
+			if(isset($_GET['model_sync'])) $force = true;
 
-			if(!$this->set_defaults($force)){
-				return;
-			}
+			if(!$this->set_defaults($force)) return $this;
 
 			//NO TABLE AND NO MODEL STRUCTURE 
 			if(!$this->table_exists && !$this->model_structure){
@@ -123,8 +178,7 @@
 
 			//TABLE EXISTS BUT NO MODEL STRUCTURE
 			else if($this->table_exists && !$this->model_structure){
-
-				$this->generate_new_structure();
+				return $this->generate_new_structure();
 			}
 
 			//BOTH TABLE AND MODEL STRUCTURE EXIST
@@ -160,7 +214,6 @@
 									
 									unset($v['Field']);
 									$altered_columns[] = array(
-
 										'field_name' 	=> $field_name,
 										'field_data' 	=> $data,
 										'rollback_data' => $v
@@ -187,61 +240,60 @@
 					$field_key ++;
 				}
 
-			
-
+				
 				//THERE ARE COLUMNS THAT NEED UPDATING
-				if(!empty($altered_columns)){
-
-					
+				if(!empty($altered_columns)){					
 				
 					//UPDATE THE ALTERED COLUMNS
 					foreach($altered_columns as $column){
-						$sql = "ALTER TABLE `{$this->table_name}` CHANGE `{$column['field_name']}` ".$this->generate_column_sql($column['field_name'], $column['field_data']);
-						$rollback = "ALTER TABLE `{$this->table_name}` CHANGE `{$column['field_name']}`".$this->generate_column_sql($column['field_name'], $column['rollback_data']);						
-						DB::query($sql);
-						$this->model_change($this->model_name, 'alter_table', base64_encode($sql), base64_encode($rollback));
+						$sql = "ALTER TABLE `{$this->_table}` CHANGE `{$column['field_name']}` ".$this->generate_column_sql($column['field_name'], $column['field_data']);
+						$rollback = "ALTER TABLE `{$this->_table}` CHANGE `{$column['field_name']}`".$this->generate_column_sql($column['field_name'], $column['rollback_data']);						
+						\DB::set($this->db_name)->query($sql);
+						//$this->model_change($this->model_name, 'alter_table', base64_encode($sql), base64_encode($rollback));
 					}
 				}
 
 				//THERE ARE NEW COLUMNS THAT NEED TO BE ADDED
-				if(!empty($new_columns)){
-
-				
+				if(!empty($new_columns)){	
 
 					//ADD THE NEW COLUMNS
 					foreach($new_columns as $column){
-						$sql = "ALTER TABLE `{$this->table_name}` ADD ".$this->generate_column_sql($column['field_name'], $column['field_data']);
-						$rollback = "ALTER TABLE `{$this->table_name}` ADD ".$this->generate_column_sql($column['field_name'], $column['rollback_data']);
-						DB::query($sql);
-						$this->model_change($this->model_name, 'alter_table', base64_encode($sql), base64_encode($rollback));
+						$sql = "ALTER TABLE `{$this->_table}` ADD ".$this->generate_column_sql($column['field_name'], $column['field_data']);
+						$rollback = "ALTER TABLE `{$this->_table}` ADD ".$this->generate_column_sql($column['field_name'], $column['rollback_data']);
+						\DB::set($this->db_name)->query($sql);
+						//$this->model_change($this->model_name, 'alter_table', base64_encode($sql), base64_encode($rollback));
 					}
 				}
+
+				
+				$this->update_cache();
+				
 			}
 
 
 			//ADD THE TABLE TO THE TABLE CACHE
 			session_start();
-			$_SESSION['table_cache'][$this->table_name] = date('Y-m-d H:i:s');
+			$_SESSION['table_cache'][$this->_table] = date('Y-m-d H:i:s');
 			session_write_close();
-			return;
+			return $this;
 		}
 
 		public function generate_new_model_and_structure(){
 			$table_prefix = strtolower($this->model_name);
 				
 			$sql = "
-				CREATE TABLE `{$this->table_name}`(
+				CREATE TABLE `{$this->_table}`(
 					`{$table_prefix}_id` int(11) AUTO_INCREMENT PRIMARY KEY,
 					`{$table_prefix}_created` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 				)
 			";
 
-			$rollback = "DROP TABLE IF EXISTS `{$this->table_name}`";
+			$rollback = "DROP TABLE IF EXISTS `{$this->_table}`";
 			
 			//CREATE THE TABLE
-			DB::query($sql);
+			\DB::set($this->db_name)->query($sql);
 
-			$this->model_change($this->model_name, 'create_table', base64_encode($sql), base64_encode($rollback));
+			//$this->model_change($this->model_name, 'create_table', base64_encode($sql), base64_encode($rollback));
 
 			//RUN AGAIN TO CREATE THE STRUCTURE
 			return $this->generate();
@@ -260,13 +312,18 @@
 			$table_vars = implode(",\n", $table_vars);
 
 			//GENERATE SQL
-			$sql = "CREATE TABLE `{$this->table_name}` \n (\n{$table_vars}\n)";
+			$sql = "CREATE TABLE `{$this->_table}` \n (\n{$table_vars}\n)";
+
+			//pr($sql);
+			//exit;
 
 			//INSERT THE TABLE
-			$res = DB::query($sql);
-			$rollback = "DROP TABLE IF EXISTS `{$this->table_name}`";
+			$res = \DB::set($this->db_name)->query($sql);
+			$rollback = "DROP TABLE IF EXISTS `{$this->_table}`";
 
-			$this->model_change($this->model_name, 'create_table', base64_encode($sql), base64_encode($rollback));
+			$this->update_cache();
+
+			//$this->model_change($this->model_name, 'create_table', base64_encode($sql), base64_encode($rollback));
 
 			return;
 		}
@@ -334,6 +391,8 @@
 				}
 
 				fclose($handle);
+
+				$this->update_cache();
 		}
 	}
 ?>

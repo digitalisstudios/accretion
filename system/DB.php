@@ -41,41 +41,8 @@
 
 		}
 
-		public static function connect(){
-			
-			self::$_link = mysqli_connect(self::$_dbhost, self::$_dbuser, self::$_dbpass, self::$_dbname);
-
-			if(!self::$_link){
-				die("Failed to connect to MySQL: " . mysqli_connect_error());			
-			}
-
-			if(!self::$_conn){
-				self::$_conn = new DB_Conn;
-			}
-
-			return self::$_conn;
-		}
-
 		public static function add_error($arr){
 
-		}
-
-		public static function set_db($alias = 'main'){
-			
-			//GET THE DB CONFIG
-			$dbconf = Config::get('database')->$alias;				
-
-			//CHECK IF WE NEED TO CONNECT TO THE DATABASE
-			if(!self::$_conn || self::$_conn !== false && $alias !== 'main' && self::$_dbalias !== $alias){
-				self::$_dbalias = $alias;
-				self::$_dbhost 	= $dbconf->host;
-				self::$_dbname 	= $dbconf->database;
-				self::$_dbuser 	= $dbconf->user;
-				self::$_dbpass 	= $dbconf->password;
-				self::connect();
-			}
-
-			return self::$_conn;
 		}
 
 		public static function query($query){
@@ -92,7 +59,7 @@
 			return false;
 		}
 
-		public static function get_row($query){
+		public static function get_row($query, $fields = []){
 
 			//MAKE SURE THE QUERY WAS VALID
 			if(self::query($query)){
@@ -100,14 +67,36 @@
 				//MAKE SURE THERE WERE ROWS
 				if(self::$_q->num_rows > 0){
 
+					$res = self::$_q->fetch_assoc();
+
+					if(is_array($fields) && !empty($fields)){
+
+						$r = [];
+						foreach($fields as $field){
+							if(isset($res[$field])){
+								$r[$field] = $res[$field];
+							}
+						}
+
+						$res = $r;
+					}
+					elseif(is_string($fields) && !empty($fields)){
+						if(isset($res[$fields])){
+							$res = $res[$fields];
+						}
+						else{
+							return false;
+						}
+					}
+
 					//RETURN CLEANED ARRAY
-					return self::stripslashes_deep(self::$_q->fetch_assoc());
+					return self::stripslashes_deep($res);
 				}
 			}		
 			return false;
 		}
 
-		public static function get_rows($query){
+		public static function get_rows($query, $fields = []){
 
 			//IF THE QUERY WAS VALID
 			if(self::query($query)){
@@ -122,6 +111,34 @@
 					while($r = self::$_q->fetch_assoc()){
 						$res[] = $r;
 					}
+
+					if(is_array($fields) && !empty($fields)){
+
+						$r = [];
+
+						foreach($res as $k => $v){
+							foreach($fields as $field){
+								if(isset($v[$field])){
+									$r[$k][$field] = $v[$field];
+								}								
+							}
+						}
+
+						$res = $r;
+
+					}
+					elseif(is_string($fields) && !empty($fields)){
+
+						$r = [];
+
+						foreach($res as $k => $v){
+							if(isset($v[$fields])){
+								$r[$k] = $v[$fields];
+							}
+						}
+
+						$res = $r;
+					}
 					
 					//RETURN CLEANED ARRAY
 					return  self::stripslashes_deep($res);
@@ -130,9 +147,7 @@
 			return false;
 		}
 
-		public static function insert($table, $data = array()){
-
-			
+		public static function insert($table, $data = array()){			
 
 			self::$inserted_columns = array();
 		
@@ -210,13 +225,20 @@
 				foreach($data as $k => $v){
 
 					if(is_array($fields[$k])){
-						self::$inserted_columns[$k] = $k;						
-						$v = self::escape($v);
-						$query .= " `{$k}` = '{$v}', ";
+						self::$inserted_columns[$k] = $k;
+						if(is_null($v)){
+							$query .= " `{$k}` = NULL, ";
+						}	
+						else{
+							$v = self::escape($v);
+							$query .= " `{$k}` = '{$v}', ";
+						}			
+						
 					}
 				}
 
 				$query = trim($query, ' ,');
+				
 				if(self::query("UPDATE `{$table}` SET {$query} WHERE {$where}")){
 					return self::$_link->insert_id;
 				}
@@ -227,17 +249,39 @@
 		public static function check_conn(){
 
 			if(!self::$_conn){
-				return self::set_db();
+				return self::set();
 			}
 			return self::$_conn;
 		}		
 
 		public static function load($dbname = false){
-			return self::set_db($dbname);
+			return self::set($dbname);
 		}
 
-		public static function set($dbname = false){			
-			return self::set_db($dbname);
+		public static function set($alias = 'main'){
+
+			if(!\Storage::get('_Db.'.$alias)){
+				
+				//GET THE DB CONFIG
+				$dbconf = \Config::get('database')->$alias;
+
+				$link = mysqli_connect($dbconf->host, $dbconf->user, $dbconf->password, $dbconf->database);
+
+				if(!$link){
+					die("Failed to connect to MySQL: ".mysqli_connect_error());
+				}
+
+				\Storage::set('_Db.'.$alias, $link);
+
+			}
+
+			if(!self::$_conn){
+				self::$_conn = new \DB_Conn;
+			}
+
+			self::$_link = \Storage::get('_Db.'.$alias);
+
+			return self::$_conn;
 		}
 
 		public static function stripslashes_deep($value){
@@ -246,15 +290,16 @@
 					$value[$k] = self::stripslashes_deep($v);
 				}
 				return $value;
-			}else{				
-				return stripslashes($value);
+			}else{
+				return is_null($value) ? null : stripslashes($value);			
+				//return stripslashes($value);
 			}
 		}
 
 		public static function escape($value, $serialize = true){
 
 			if(!self::$_link){
-				self::set_db();				
+				self::set();				
 			}
 
 			if($serialize){
@@ -283,4 +328,3 @@
 
 		}
 	}
-?>

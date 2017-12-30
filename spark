@@ -18,7 +18,7 @@
 		}
 
 		public function load_commands(){
-			foreach(glob(SPARK_PATH.'*.php') as $file_name){
+			foreach(glob(SYSTEM_PATH.'spark/*.php') as $file_name){
 				include_once $file_name;
 				$this->commands[\Controller::format_url(pathinfo($file_name)['filename'])] = 'Command\\'.pathinfo($file_name)['filename'];
 			}
@@ -69,7 +69,6 @@
 
 			}
 			else{
-
 				if(is_null($command) || $command == ''){
 					$this->show_help();
 				}
@@ -118,6 +117,8 @@ $header = "\n\n
                         'Command'       => $class.':'.$method,
                         'Description'   => $description
                     ];
+					
+					//echo "	{$class}:{$method}		{$description}\n";
 				}
 
                 $table[] = ['Command' => '', 'Description' => ''];
@@ -125,7 +126,13 @@ $header = "\n\n
 
             $table = $this->cli_generate_table($table);
 
+            /*$table = \Buffer::start(function($table){
+                $this->cli_print_table($table);
+            }, $table);*/
+
             echo $this->cli_indent($table, 5);
+
+            //$this->cli_print_table($table);
             echo "\n\n";
 			exit;
 		}

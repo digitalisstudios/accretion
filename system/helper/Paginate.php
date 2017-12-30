@@ -23,7 +23,7 @@
 
 			$this->_model 	= !is_object($name) ? Model::get($name) : $name;
 			$name 			= $this->_model->model_name();
-			$this->_table 	= $this->_model->table_name();
+			$this->_table 	= $this->_model->_table();
 			$this->_model 	= $name;
 			return $this;
 		}

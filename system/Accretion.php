@@ -39,6 +39,7 @@
                     'Config', 
                     'Reflect',
                     'Buffer',
+                    'Storage',
                 ];
 
                 //LOAD THE CLASSES
@@ -59,4 +60,3 @@
             return $this;
         }
     }
-?>

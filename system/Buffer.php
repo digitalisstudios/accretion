@@ -35,4 +35,3 @@
 			return strlen($res) ? $res : false;
 		}
 	}
-?>

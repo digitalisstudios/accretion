@@ -149,87 +149,85 @@
 
 	//DEBUG FUNCTION FOR PRINTING OUT DATA
 	if(!function_exists('pr')){
-		function pr($data, $extra = false){
-			
-			if(is_object($data) && !$extra && is_model($data)){
-				$new_model_name = get_class($data);
-				$new_model = new $new_model_name;
-				foreach($new_model as $k => $v){
-					unset($new_model->$k);
-				}
-				$model_data = $data->expose_data();
-				foreach($model_data as $k => $v){
-					$new_model->$k = $v;
-				}
-				$new_data = $new_model;
-			}
-			elseif(is_array($data)){
-				$new_data = array();
-				foreach($data as $k => $d){
-					if(is_object($d) && !$extra && is_model($d)){
-						$new_model_name = get_class($d);
-						$new_model = new $new_model_name;
-						foreach($new_model as $x => $v){
-							unset($new_model->$x);
-						}
-						$model_data = $d->expose_data();
-						foreach($model_data as $x => $v){
-							$new_model->$x = $v;
-						}
-						$new_data[$k] = $new_model;
-					}
-					else{
-						$new_data[$k] = $d;
-					}
-				}
-			}
-			elseif(is_object($data) && !$extra && get_class($data) == 'ORM_Wrapper'){
+		function pr($data, $extra = false, $print = true){
 
-				$new_data = new ORM_Wrapper;
+			//IF WE DONT WANT TO PRINT FULL
+			if(!$extra){
 
-				foreach($data as $k => $d){
-					if(is_object($d) && !$extra && is_model($d)){
-						
-						$new_model_name = get_class($d);
-						$new_model = new $new_model_name;
+				//IF WE ARE PRINTING AN OBJECT
+				if(is_object($data)){
+					
+					//CLONE THE DATA
+					$new_data = clone $data;
 
-						foreach($new_model as $x => $v){
-							unset($new_model->$x);
+					//IF THE OBJECT IS A MODEL
+					if(is_model($data)){
+
+
+						foreach($new_data as $k => $v){
+							if($k == '_data') continue;
+							unset($new_data->$k);
 						}
 
-						$model_data = $d->expose_data();
+						//GET THE KEYS
+						//$keys = array_keys($new_data->structure);
 
-						foreach($model_data as $x => $v){
-							$new_model->$x = $v;
-						} 
-
-						$new_data->push($new_model);			
-						
+						//UNSET THE DATA
+						//foreach($new_data as $k => $v) if(!in_array($k, $keys)) unset($new_data->$k);
 					}
+
+					//IF WE ARE PRINTING A WRAPPER
+					elseif(get_class($data) == 'ORM_Wrapper'){
+						foreach($new_data as $k => $v) $new_data[$k] = pr($v, false, false);
+					}
+				}
+				elseif(is_array($data)){
+					$new_data = $data;
+					foreach($new_data as $k => $v){
+						$new_data[$k] = pr($v, false, false);
+					}
+				}
+				elseif(is_string($data)){
+					$new_data = htmlentities($data);
+				}
+				else{
+					$new_data = $data;
 				}
 			}
 			else{
 				$new_data = $data;
 			}
-			echo '<pre>';
 
-			if(isset($_GET['pr_info'])){
-				$debug = debug_backtrace()[0];
-				echo '<br>';
-				print_r('File: '.$debug['file']);
-				echo '<br>';
-				print_r('Line: '.$debug['line']);
-				echo '<br>';
-			}
+			//JUST RETURN THE DATA IF WE ARE NOT PRINTING
+			if(!$print) return $new_data;
 
-			if(!$new_data){
-				var_dump($new_data);
-			}
-			else{
-				print_r($new_data);
-			}
+			echo '<pre>';			
+			$debug = debug_backtrace()[0];
+			echo '<b>File: '.$debug['file'].' Line: '.$debug['line'].'</b>'."\n";
+
+			!$new_data ? var_dump($new_data) : print_r($new_data);
 
 			echo '</pre>';
 		}
 	}
-?>
+
+	if(!function_exists('array_group')){
+		function array_group(&$arr = []){
+
+			//RETURN EMPTY ARRAYS
+			if(empty($arr)) return $arr;
+
+			//INITIALIZE SOME VARS
+			$res 		= [];
+			$res_keys 	= [];
+			$keys 		= array_keys($arr);
+
+			//LOOP THROUGH THE RESULTS
+			foreach($keys as $key) 		foreach($arr[$key] as $k => $v) 								$res[$k][$key] 	= $v;
+			foreach($res as $k => $v) 	foreach($v as $x => $y) 		if(!in_array($x, $res_keys)) 	$res_keys[] 	= $x;
+			foreach($res as $k => $v) 	foreach($res_keys as $x) 		if(!isset($res[$k][$x])) 		$res[$k][$x] 	= null;
+
+			//SEND BACK THE RESULTS
+			return $arr = $res;
+		}
+	}
