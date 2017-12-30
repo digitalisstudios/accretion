@@ -212,14 +212,13 @@
 
 		public function auto_header(){
 
-			
-			//GET THE MAIN STYLE SHEET
-			View::css('style');
-
 			//GET THE STYLESHEETS
 			foreach(Config::get('css') as $css){
 				View::css($css);
 			}
+
+			//GET THE MAIN STYLE SHEET
+			View::css('style');
 
 			//GET THE JAVASCRIPT
 			foreach(Config::get('js') as $js){
