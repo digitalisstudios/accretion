@@ -1,8 +1,6 @@
 <?php
 
 	class User extends Model{
-
-		use User_Extra;
 		
 		public $structure = array(			
 			'user_id' 					=> array('Type' => "int(11)",'Extra' => "auto_increment",),
