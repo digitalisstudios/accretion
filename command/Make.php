@@ -417,7 +417,7 @@ $structure_string
 				if(isset($arguments[0])){
 					$name = $arguments[0];
 
-					$path = SYSTEM_PATH.'spark/';
+					$path = SPARK_PATH.'spark/';
 
 					if(!file_exists($path.$name.'.php')){
 						$handle = fopen($path.$name.'.php', 'w+');

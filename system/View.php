@@ -322,21 +322,11 @@
 		}
 
 		public static function is($path){
-
-			if(View::local_template_path(true) === Controller::format_url($path)){
-				return true;
-			}
-
-			return false;
+			return \View::local_template_path(true) === \Controller::format_url($path) ? true : false;
 		}
 
 		public static function has($path){
-
-			if(strpos(View::local_template_path(true), Controller::format_url($path)) === 0){
-				return true;
-			}
-
-			return false;
+			return strpos(View::local_template_path(true), Controller::format_url($path)) !== false ? true : false;
 		}
 
 		//CHECK ON THE LOCAL TEMPLATE PATH

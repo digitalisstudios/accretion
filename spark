@@ -18,9 +18,9 @@
 		}
 
 		public function load_commands(){
-			foreach(glob(SYSTEM_PATH.'spark/*.php') as $file_name){
+			foreach(glob(SPARK_PATH.'*.php') as $file_name){
 				include_once $file_name;
-				$this->commands[\Controller::format_url(pathinfo($file_name)['filename'])] = 'Command\\'.pathinfo($file_name)['filename'];
+				$this->commands[\Controller::format_url(pathinfo($file_name, PATHINFO_FILENAME))] = 'Command\\'.pathinfo($file_name, PATHINFO_FILENAME);
 			}
 		}
 
