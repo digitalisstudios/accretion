@@ -5,6 +5,8 @@
 		public static $view_loaded = false;
 		public static $scripts = [];
 		public static $styles = [];
+		public static $bodyAttributes = [];
+
 
 		public function __construct(){
 			
@@ -55,6 +57,9 @@
 		}
 
 		public function include_path($paths, $break = true){
+			if(!\Accretion::$controller){
+				\Accretion::$controller = new \Controller;
+			}
 			foreach($paths as $path){
 				\Accretion::$controller->load_file($path);
 				if($break) break;	
@@ -266,13 +271,19 @@
 			View::js(Accretion::$template_name, implode('/', $paths));
 		}
 
+		public static function parse_asset_params($arr){
+			$res = [];
+			foreach($arr as $k => $v) $res[] = $k.'="'.$v.'"';
+			return implode(' ', $res);
+		}
 
-		public function js($file_name, $path = false){
 
-			if(validate_url($file_name)){
+		public function js($file_name, $path = false, $params = []){
+
+			if(strtolower(substr($file_name, -3)) == '.js' && validate_url($file_name)){
 				if(!in_array($file_name, View::$scripts)){
 					View::$scripts[] = $file_name;
-					echo "<script src=\"{$file_name}\"></script>";
+					echo "<script src=\"{$file_name}\" ".\View::parse_asset_params($params)."></script>";
 				}
 			}
 			else{
@@ -287,33 +298,43 @@
 					$web_path = str_replace(VIEW_PATH, WEB_VIEW_PATH, $path);
 					if(!in_array($web_path, View::$scripts)){
 						View::$scripts[] = $web_path;
-						echo "\n<script src=\"{$web_path}?{$time}\"></script>\n";
+						$web_path .= '?'.time();
+						echo "\n<script src=\"{$web_path}\" ".\View::parse_asset_params($params)."></script>\n";
 					}
 					break;
 				}
 			}			
 		}
 
-		public function css($file_name, $path = false){
+		public function css($file_name, $path = false, $params = []){
 
-			if(validate_url($file_name)){
+
+
+			//$original_file_name = $file_name;
+
+
+			if(strtolower(substr($file_name, -4)) == '.css' && validate_url($file_name)){
 				if(!in_array($file_name, View::$styles)){
 					View::$styles[] = $file_name;
-					echo "<link rel=\"stylesheet\" type=\"text/css\" href=\"{$file_name}\">";
+					echo "<link rel=\"stylesheet\" type=\"text/css\" href=\"{$file_name}\" ".\View::parse_asset_params($params).">";
 				}
 			}
 			else{
 				$path 		= $path === false ? Accretion::$controller->controller_template_path : $path;
 				$file_name 	.= '.css';		
-				$time 		= time();
-				
+				$time 		= time();				
 				$paths 		= View::build_search_paths($file_name, 'css', true, $path);
+
+				
 
 				foreach($paths as $path){					
 					$web_path = str_replace(VIEW_PATH, WEB_VIEW_PATH, $path);
+
+
 					if(!in_array($web_path, View::$styles)){
 						View::$styles[] = $web_path;
-						echo "\n<link rel=\"stylesheet\" type=\"text/css\" href=\"{$web_path}?{$time}\">\n";
+						$web_path .= '?'.time();
+						echo "\n<link rel=\"stylesheet\" type=\"text/css\" href=\"{$web_path}\" ".\View::parse_asset_params($params).">\n";
 					}
 					
 					break;
@@ -321,8 +342,12 @@
 			}
 		}
 
-		public static function is($path){
-			return \View::local_template_path(true) === \Controller::format_url($path) ? true : false;
+		public static function is($path = null){
+			if(!is_null($path)){
+				return \View::local_template_path(true) === \Controller::format_url($path) ? true : false;
+			}
+			return \View::local_template_path(true);
+			
 		}
 
 		public static function has($path){

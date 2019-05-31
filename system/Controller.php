@@ -1,6 +1,6 @@
 <?php
 	
-	class Controller extends Accretion {
+	class Controller {
 
 		public static $_loader_vars = [];
 
@@ -11,42 +11,21 @@
 //----------------------------------// GLOBAL CONTROLLER METHODS //-------------------------//
 
 		//LOAD A CONTROLLER AND OPTIONAL TEMPLATE
-		public static function get($controller = false){
-			
-			//FORCE THE CONTROLLER
-			$controller 					= $controller === false ? Controller::parse_from_request() : Controller::parse_from_request($controller);
+		public static function get($controller = false, $method = null, $pass_vars = null){
 
-			//IF NO CONTROLLER PUT OUT 404 ERROR
-			if(is_null($controller)) \Request::error(404);			
+			$controller = \Controller::_load($controller);
 
-			//SET TEMPLATE AND CONTROLLER VARSs
-			$template_path 					= $controller->get_controller_template_path();
-			$template 						= $controller->get_requested_template();
-			Accretion::$controller 			= $controller;
-			Accretion::$controller_name 	= get_class($controller);
-			Accretion::$template_name 		= $template;
-			Accretion::$template_path 		= $template_path;
-			
-			//CHECK THAT THE CONTROLLER AND THE METHOD EXIST
-			if(Accretion::$controller && method_exists(Accretion::$controller, $template)){
+			if(is_null($controller)) return \Request::error(404);
 
-				//SET THE METHOD NAME
-				Accretion::$method_name 	= $template;
-				$result 					= Reflect::reflectable_class(Accretion::$controller, $template, Request::get_vars()) ? Reflect::reflect_class(Accretion::$controller, $template, Request::get_vars()) : Accretion::$controller->$template();	
-				Accretion::$template_name 	= file_exists(Accretion::$template_path.'/'.Accretion::$method_name.'.php') ? Accretion::$method_name : Accretion::$template_name;
-			}
-
-			//SPECIAL CASE FOR INDEX METHOD BECAUSE WE CAN LOAD A TEMPLATE WITHOUT A REQUEST VAR
-			else if(Accretion::$template_name == 'index' && method_exists(Accretion::$controller, 'index')){
-				$method_name 	= 'index';
-				$result 		= Accretion::$controller->index();
-			}
+			$result = $controller->_route($method, $pass_vars);
 
 			//MAKE SURE THE SESSION WRITE IS CLOSED
 			Session::update(function(){});
 
 			//RETURN JSON IF NEEDED
 			Request::return_json($result);
+
+			if(php_sapi_name() === 'cli') return Accretion::$controller;
 
 			//CHECK IF THE VIEW WAS LOADED FROM THE RESULT
 			if(View::$view_loaded && !is_null($result) && is_string($result)){
@@ -57,11 +36,100 @@
 			//WE HAVE TO CALL THE VIEW METHOD DYNAMICALLY TO SOLVE INHERITANCE ISSUES
 			else{
 				View::$view_loaded = false;
-				Accretion::$controller->load_controller_view($template);
+				Accretion::$controller->load_controller_view(Accretion::$template_name);
 			}
 			
 			//SEND BACK THE CONTROLLER
 			return Accretion::$controller;
+		}
+
+		public static function _load($controller = false){
+
+			if(\Request::is_ajax()){
+
+				ini_set('display_errors', 0);
+				error_reporting(0);
+				ob_start();
+
+				register_shutdown_function(function(){
+					$error = error_get_last();
+
+			    	// fatal error has occured
+				    if ($error['type'] === E_ERROR) {
+
+				    	$file = \DB::escape($error['file']);
+						$line = \DB::escape($error['line']);
+				    	$parts = explode('Stack trace:', $error['message']);
+				    	$trace = array_values(array_filter(explode("\n", $parts[1])));
+				    	array_pop($trace);
+				    	foreach($trace as $k => $v) $trace[$k] = substr(strstr(trim($v)," "), 1);
+				    	
+				    	$data = (object)[
+				    		'trace' 		=> $trace,
+				    		'file' 			=> $file,
+				    		'line' 			=> $line,				    		
+				    	];
+
+				    	return \Request::error(500, $data, trim($parts[0]));
+				    }
+				    elseif(!ob_get_length()){
+				    	return \Request::error(404, ['trace' => [], 'file' => null, 'line' => null]);
+				    }
+				});
+			}
+
+
+			//FORCE THE CONTROLLER
+			$controller = $controller === false ? Controller::parse_from_request() : Controller::parse_from_request($controller);
+
+			//IF NO CONTROLLER PUT OUT 404 ERROR
+			if(is_null($controller)) return null;
+
+			$controller->get_controller_template_path();
+
+			return $controller;
+		}
+
+		public function _route($method = null, $pass_vars = null){
+
+			$result 						= null;
+			$controller 					= $this;
+			Accretion::$controller 			= $controller;
+			Accretion::$controller_name 	= get_class($controller);
+			Accretion::$template_name 		= is_null($method) ? $controller->get_requested_template() : $method;
+			Accretion::$template_path 		= $controller->get_controller_template_path();
+
+			//RUN THE CONSTRUCTOR
+			$controller->__construct();
+
+			if(function_exists('_controller_after_boot')) _controller_after_boot($controller);		
+
+			if(isset($controller->_auth_roles)) $controller->require_login();	
+
+			//CHECK THAT THE CONTROLLER AND THE METHOD EXIST
+			if(Accretion::$controller && method_exists(Accretion::$controller, Accretion::$template_name)){
+
+				$pass_vars = is_null($pass_vars) ? \Request::get_vars() : $pass_vars;
+
+				//SET THE METHOD NAME
+				Accretion::$method_name 	= Accretion::$template_name;
+				try{
+					$result 					= Reflect::reflectable_class(Accretion::$controller, Accretion::$template_name, $pass_vars) ? Reflect::reflect_class(Accretion::$controller, Accretion::$template_name, $pass_vars) : Accretion::$controller->{Accretion::$template_name}();
+				}
+				catch(\ArgumentCountError $e){
+					return \Request::error(404, $_SERVER['dev_mode'] ? $e->getMessage() : null);
+				}
+					
+				Accretion::$template_name 	= file_exists(Accretion::$template_path.'/'.Accretion::$method_name.'.php') ? Accretion::$method_name : Accretion::$template_name;
+			}
+
+			//SPECIAL CASE FOR INDEX METHOD BECAUSE WE CAN LOAD A TEMPLATE WITHOUT A REQUEST VAR
+			else if(Accretion::$template_name == 'index' && method_exists(Accretion::$controller, 'index')){
+				$method_name 	= 'index';
+				$result 		= Accretion::$controller->index();
+			}
+
+			return $result;
 		}
 
 		public static function backup_loader_vars(){
@@ -199,61 +267,104 @@
 
 		//REQUIRE LOGIN
 		public function require_login($var = null, $value = null){
+			
+			if(debug_backtrace()[2]['function'] == 'reflect_class') return;
 
-			//ASSUME WE NEED TO REDIRECT
 			$redirect = false;
 
-			//GET THE AUTHORIZIATION CREDENTIAL TYPES
-			$by = \Auth::by();
 
-			if(!isset($_SESSION[$by->session_name])){
+			
+			if(isset($this->_disable_login) && in_array(\Controller::format_url(\Accretion::$template_name), $this->_disable_login)){
+				$redirect = false;
+			}
+			
+			elseif(isset($this->_auth_roles) && \Auth::user()){
+				
 				$redirect = true;
+
+				foreach($this->_auth_roles as $field => $roles){					
+
+					if(in_array(\Auth::user()->$field, $roles)){
+						$redirect = false;
+						break;
+					}
+				}
 			}
 			else{
 
-				//GET THE USER DATA
-				$user = $_SESSION[$by->session_name];
 
-				//CHECK IF THE VARIABLE NAME MATHES THE VALUE
-				if(!is_null($var) && !is_null($value)){
-					if(!isset($user[$var]) || isset($user[$var]) && $user[$var] !== $value){
-						$redirect = true;
-					}
+				//ASSUME WE NEED TO REDIRECT
+				$redirect = false;
+
+				//GET THE AUTHORIZIATION CREDENTIAL TYPES
+				$by = \Auth::by();
+
+				if(!isset($_SESSION[$by->session_name])){
+					$redirect = true;
 				}
+				else{
 
-				//CHECK FOR VARIABLE NAME
-				elseif(!is_null($var)){
-					if(!isset($user[$var])){
-						$redirect = true;
+					//GET THE USER DATA
+					$user = $_SESSION[$by->session_name];
+
+					//CHECK IF THE VARIABLE NAME MATHES THE VALUE
+					if(!is_null($var) && !is_null($value)){
+
+						if(isset($user[$var]) && is_array($value)){
+							if(!in_array($user[$var], $value)){
+								$redirect = true;
+							}
+						}
+						elseif(!isset($user[$var]) || isset($user[$var]) && $user[$var] !== $value){
+							$redirect = true;
+						}
 					}
-				}
 
-				//CHECK FOR USER ID
-				elseif(is_null($var)){
-					if(!isset($user[$by->login_with])){
-						$redirect = true;
+					//CHECK FOR VARIABLE NAME
+					elseif(!is_null($var)){
+						if(!isset($user[$var])){
+							$redirect = true;
+						}
+					}
+
+					//CHECK FOR USER ID
+					elseif(is_null($var)){
+						if(!isset($user[$by->login_with])){
+							$redirect = true;
+						}
 					}
 				}
 			}
+
+
 
 			//USE ENCRYPTION KEY TO BYPASS LOGIN
 			if(\Request::get('auth') == \Config::get('encryption_key') || \Request::headers('Auth-Key') == \Config::get('encryption_key')){
 				$redirect = false;
-			}
+			}	
+
+			if(php_sapi_name() === 'cli') $redirect = false;
 
 			//IF WE NEED TO REDIRECT
 			if($redirect){
 
 				//SET THE SESSION REDIRECT TO VAR
 				\Session::update(function(){
-					if(isset($_SERVER['REQUEST_URI']) && !isset($_SESSION['redirect_to'])){
+					if(isset($_SERVER['REQUEST_URI']) && !isset($_SESSION['redirect_to']) && !is_ajax()){
 						$_SESSION['redirect_to'] = $_SERVER['REQUEST_URI'];
 					}
 				});
 
-				//REDIRECT THE USER
-				\Helper::Redirect(WEB_APP.'Login');
+				if(\Auth::user()){
+					return \Request::error(403);
+				}
 
+				if($_SERVER['accretion_context'] == 'api'){
+					return \Request::error(511, 'This endpoint requires authentication. Please provide proper credentials.');
+				}
+				
+				//REDIRECT THE USER
+				return \Helper::Redirect(WEB_APP.$by->login_uri);
 			}
 		}
 
@@ -425,7 +536,36 @@
 
 		public function get_controller_web_path(){
 			return str_replace('.php', '/', str_replace(CONTROLLER_PATH, WEB_APP, $this->get_controller_path()));
-		}		
+		}
+
+		public static function isSub($controller_name, $checkSelf = false){
+
+			if($checkSelf){
+				if(self::is($controller_name)){
+					return true;
+				}
+			}
+
+			$parents = array_values(class_parents(\Accretion::$controller));
+			foreach($parents as $parent){
+				if(\Controller::format_url(self::controller_name($parent)) == \Controller::format_url($controller_name)){
+					return true;
+				}
+			}
+			return false;
+		}
+
+		public static function isIn($controller_name){
+			return self::isSub($controller_name, true);
+		}
+
+		public static function is($controller_name = null){
+			if(is_null($controller_name)){
+				return \Accretion::$controller->controller_name();
+			}
+
+			return \Controller::format_url(\Accretion::$controller->controller_name()) == \Controller::format_url($controller_name);
+		}
 
 		//GET THE CONTROLLER NAME
 		public function controller_name($controller = null){
@@ -436,6 +576,10 @@
 			elseif(is_object($controller)){
 				$controller = get_class($controller);
 			}
+
+			$controllerParts = explode('\\', $controller);
+			array_shift($controllerParts);
+			return implode('\\', $controllerParts);
 
 			$controller = end(explode('\\', $controller));
 

@@ -5,7 +5,7 @@
 		public $files 		= array();
 
 		public function __construct(){
-			$this->directory = APP_PATH.'upload/';
+			$this->directory = STORAGE_PATH;
 		}		
 
 		public function directory($path){

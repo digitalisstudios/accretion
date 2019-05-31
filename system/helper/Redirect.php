@@ -34,19 +34,32 @@
 
 			//SEND BACK THE URL IF IS AJAX
 			if(Request::is_ajax()){
-				return ['url' => $location];
+
+				\Request::return_json(['url' => $location, 'redirect' => true]);
+
+				header('Content-type: application/json');
+				die(json_encode(['url' => $location, 'redirect' => true]));
+				//return ['url' => $location];
+			}
+			else{
+				if(headers_sent()){
+					echo "<script>window.location.href = '{$location}'</script>";
+					exit;
+				}
+
+				//REDIRECT TO THE LOCATION
+				header("Location: {$location}");
+				exit;
 			}
 
-			//REDIRECT TO THE LOCATION
-			header("Location: {$location}");
-			exit;
+			
 		}
 
 		//REDIRECT TO THE CURRENT CONTROLLER
 		public function local($location = null, $flash = null){			
 			
 			//BUILD THE TARGET
-			$target = WEB_APP.Accretion::$controller->controller_template_path.'/';
+			$target = \Controller::format_url(WEB_APP.Accretion::$controller->controller_template_path.'/');
 
 			//APPEND THE LOCATION IF IT WAS PASSED
 			if(!is_null($location)){
@@ -58,13 +71,17 @@
 		}
 
 		//REDIRECT TO ANOTHER LOCATION IN THE APP
-		public function app($location, $flash = null){
+		public function app($location = '', $flash = null){
 			return $this->to(WEB_APP.$location, $flash);
 		}
 
-		//SEND BACK TO THE REFERRING PAGE
+		//SEND BACK TO THE REFERRING PAGE (SHOULD BE REMOVED BECAUSE ->back() IS BETTER SYNTAX)
 		public function from(){
 			return $this->to($_SERVER['HTTP_REFERER']);
 		}
+
+		//SEND BACK TO THE REFERRING PAGE
+		public function back(){
+			return $this->to($_SERVER['HTTP_REFERER']);
+		}
 	}
-?>

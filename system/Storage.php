@@ -169,4 +169,27 @@
 			}
 			return false;
 		}
+
+		public static function create_unique_id(){
+			if(!\Storage::get('_unique_ids')){
+				\Storage::set('_unique_ids', []);
+			}
+
+			$unique_ids = \Storage::get('_unique_ids');
+
+			$unique_id = md5(microtime(true));
+
+			$i = 0;
+			while(in_array($unique_id, $unique_ids)){
+				//usleep(100);
+				$i++;
+				$unique_id = md5(microtime(true)).'_'.$i;
+			}
+
+			$unique_ids[] = $unique_id;
+
+			\Storage::set('_unique_ids', $unique_ids);
+
+			return $unique_id;
+		}
 	}

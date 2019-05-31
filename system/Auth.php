@@ -66,11 +66,15 @@
 					$model = \Model::get($by->model_name);
 
 					if($model){
-						Auth::$user = $model->load($_SESSION[$by->session_name][$by->model_key]);
+						Auth::$user = $model->call_hooks(false)->load($_SESSION[$by->session_name][$by->model_key]);
+
 					}
 					else{
 						Auth::$user = $_SESSION[$by->session_name];
-					}		
+					}
+
+					Auth::$user->auth_ip = $_SERVER['REMOTE_ADDR'];
+							
 					return Auth::$user;
 				}
 			}
@@ -93,7 +97,80 @@
 			$res->model_key 	= isset($auth->model_key) 		? $auth->model_key 		: 'user_id';
 			$res->login_with 	= isset($auth->login_with) 		? $auth->login_with 	: 'user_email';
 			$res->login_pass 	= isset($auth->login_pass) 		? $auth->login_pass 	: 'user_password';
+			$res->role 			= isset($auth->role) 			? $auth->role 			: 'user_role';
+			$res->login_uri 	= isset($auth->login_uri) 		? $auth->login_uri 		: 'login';
+			$res->session_fields = isset($auth->session_fields) ? $auth->session_fields : ['user_id','user_first_name','user_last_name','user_email','user_role'];
 
 			return $res;
+		}
+
+		public static function sessionFields($object){
+			$sessionFieldKeys = \Auth::by()->session_fields;
+
+			$data = [];
+
+			foreach($sessionFieldKeys as $key){
+				$data[$key] = $object->$key;
+			}
+
+			return $data;
+		}
+
+		public static function roleIs($val = null){
+			
+			if(\Auth::user()){
+				if(is_null($val)){
+					$authBy = \Auth::by();
+					$roleField = $authBy->role;
+					return \Auth::user()->$roleField;
+				}
+			}
+
+			return \Auth::role($val, '_Exact_');
+		}
+
+		public static function role(){
+
+			if(\Auth::user()){
+
+				$authBy = \Auth::by();
+				$roleField = $authBy->role;
+
+				$role = \Auth::user()->$roleField;
+
+				//$role = \Auth::user()->user_role;
+
+				$roles = \Auth::user()->get_enum($roleField);
+
+				$vars = func_get_args();
+
+				
+
+				if(count($vars) == 1){
+					
+					$var = reset($vars);
+
+					return in_array($var, $roles) && array_search($var, $roles) >= array_search($role, $roles) ? true : false;
+
+				}
+				else if(count($vars) > 1){
+
+					return in_array($role, $vars);
+				}
+			}
+			
+
+			return false;
+		}
+
+		public static function login($user){
+			
+			$by 		= \Auth::by();				
+
+			if($user->loaded()){
+
+				//UPDATE THE SESSION
+				\Session::set($by->session_name, \Auth::sessionFields($user));
+			}
 		}
 	}

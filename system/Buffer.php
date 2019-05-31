@@ -5,33 +5,46 @@
 
 	class Buffer extends Accretion {
 
+		private static $_flushed = false;
+
 		public function __construct(){
 
 		}
 
-		public function start($callback, $vars = array()){
-			
-			//ASSUME THERE IS NOTHING IN THE BUFFER
-			$original_output = false;
-
-			//CHECK THE BUFFER
-			if(ob_get_level()){
-				$original_output = ob_get_clean();	
-			}
-
-			//START BUFFERING
+		public static function start($callback, $vars = array()){
 			ob_start();
 
 			$callback($vars);
 
-			//GET THE OUTPUT
 			$res = ob_get_clean();
 
-			if($original_output !== false){
-				ob_start();
-				echo $original_output;
-			}
-
 			return strlen($res) ? $res : false;
+			
+		}
+
+		public static function flush(){
+
+			if(!self::$_flushed){
+				@ini_set('zlib.output_compression', 'Off');
+				@ini_set('output_buffering', 'Off');
+				if(function_exists('apache_setenv')) @apache_setenv('no-gzip', 1);
+				if(!headers_sent()) header('X-Accel-Buffering: no');
+				self::$_flushed = true;
+			}
+			
+
+			@ob_end_flush();
+			ob_implicit_flush(1);
+			
+
+			/*
+			@ini_set('zlib.output_compression', 'Off');
+			@ini_set('output_buffering', 'Off');
+			@ini_set('output_handler', '');
+			if(function_exists('apache_setenv')) @apache_setenv('no-gzip', 1);
+			if(!headers_sent()){ header("Content-Encoding: none");}
+			@ob_end_flush();
+			ob_implicit_flush(1);
+			*/
 		}
 	}

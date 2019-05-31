@@ -7,8 +7,9 @@
 		public $error;							// Error storage
 		public $print_errors 		= true;		// Toggle using $this->print_errors(bool);
 		public $print_field_title 	= true;		// Toggle using $this->print_titles(bool);
-		public $error_class 		= 'has-error';
+		public $error_class 		= 'is-invalid';
 		public $force_false 		= false;
+		public $label 				= false;
 		public $_validators 		= [
 			'_validate_reqd',
 			'_validate_setreqd',
@@ -31,7 +32,13 @@
 			'_validate_phone',
 			'_validate_date',
 			'_validate_time',
-			'_validate_cond'
+			'_validate_cond',
+			'_validate_has_symbol',
+			'_validate_has_caps',
+			'_validate_has_number',
+			'_validate_has_letter',
+			'_validate_unique',
+			'_validate_ssn',
 		];
 
 		public function __construct(){
@@ -219,7 +226,7 @@
 
 			// Confirm
 			if(preg_match('/match\[(.*?)\]/i', $type, $m)){
-				if($field != $this->data[$m[1]]){
+				if($field != $this->_data[$m[1]]){
 					return false;
 				}
 			}
@@ -244,6 +251,8 @@
 			return true;
 
 		}
+
+
 
 		public function _validate_min_date($field, $field_name, $type){
 
@@ -376,6 +385,20 @@
 
 		}
 
+		public function _validate_ssn($field, $field_name, $type){
+
+			$field = trim($field);
+
+			if($type == 'ssn' && !preg_match("/^(?!219-09-9999|078-05-1120)(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$/", $field)){
+				if(strlen($field) > 0){
+					return false;
+				}
+			}
+
+			return true;
+			
+		}
+
 		public function _validate_phone($field, $field_name, $type){
 
 			$field = trim($field);
@@ -453,6 +476,54 @@
 			return true;
 		}
 
+		public function _validate_has_symbol($field, $field_name, $type){
+			$val_type = 'has_symbol';
+			$val_match = "#\W+#";
+			return (($type == $val_type && preg_match($val_match, $field)) || $type !== $val_type) ? true : false;
+		}
+
+		public function _validate_has_caps($field, $field_name, $type){
+			$val_type = 'has_caps';
+			$val_match = "#[A-Z]+#";
+			return (($type == $val_type && preg_match($val_match, $field)) || $type !== $val_type) ? true : false;
+		}
+
+		public function _validate_has_number($field, $field_name, $type){
+			$val_type = 'has_number';
+			$val_match = "#[0-9]+#";
+			return (($type == $val_type && preg_match($val_match, $field)) || $type !== $val_type) ? true : false;
+		}
+
+		public function _validate_has_letter($field, $field_name, $type){
+			$val_type = 'has_letter';
+			$val_match = "#[a-z]+#";
+			return (($type == $val_type && preg_match($val_match, $field)) || $type !== $val_type) ? true : false;
+		}
+
+		public function _validate_unique($field, $field_name, $type){
+
+			$reg = "/unique\[(.*?):(.*?)(?:(\|(.*?):(.*?)))?\]/i";
+			//$reg = '/unique\[(.*?)\|(.*?)\]/i';
+
+			
+
+			if(preg_match($reg, $type, $m)){
+				$check_table = $m[1];
+				$check_field = $m[2];
+
+				
+
+				$query = "SELECT count(*) AS c FROM `{$check_table}` WHERE `{$check_field}` = '{$field}'";
+
+				if(isset($m[4])) $query .= " AND `{$m[4]}` != '{$m[5]}'";
+
+				if(\DB::get_row($query)['c'] > 0) return false;
+			}
+
+			return true;
+		}
+
+
 		public function set_error_class($name){
 			$this->error_class = $name;
 			return $this;
@@ -466,6 +537,9 @@
 		}
 
 		public function has_error($field_name){
+
+			
+
 			if(isset($this->error[$field_name])){
 				return $this->error[$field_name];
 			}
@@ -526,6 +600,33 @@
 			return $value;
 		}
 
+		public function label($label){
+			$this->label = $label;
+			return $this;
+		}
+
+		public function start_wrap($field_name){
+			$this->current_field_name = $field_name;
+			if($this->label !== false){
+				?>
+					<div class="form-group <?=$this->error_class($field_name)?>">
+						<label class="control-label"><?=$this->label?></label>
+				<?
+			}
+		}
+
+		public function end_wrap(){
+			//$this->render_error($this->current_field_name);
+			if($this->label !== false){
+				?>
+					</div>
+				<?
+			}
+
+			$this->label = false;
+			return $this;
+		}
+
 		public function temp_val($val){
 			$this->_temp_val = $val;
 			return $this;
@@ -543,18 +644,30 @@
 
 		public function render_error($field_name){
 			
+			/*
 			if(strpos($field_name, "[")){
 				$field_name = $this->parse_field_name($field_name);
 			}
+			*/
 
-			if(isset($this->error[$field_name])): ?>
-				<span class="help-block">
-					<?=$this->error[$field_name][0]?>
-				</span>
+			if($this->has_error($field_name)): ?>
+				<div class="invalid-feedback">
+					<?=$this->has_error($field_name)[0]?>
+				</div>
 			<? endif;
 		}
 
 		public function render_field($field_name, $attributes = [], $callback){
+
+			$this->start_wrap($field_name);
+			
+
+			if($this->has_error($field_name)){
+				if(!isset($attributes['class'])){
+					$attributes['class'] = "";
+				}
+				$attributes['class'] .= " is-invalid ";
+			}
 
 			$multi = '';
 			if(isset($attributes['multiple']) && $attributes['multiple'] == 'true'){
@@ -570,7 +683,9 @@
 
 			$callback($meta, $value);
 
-			$this->render_error($field_name);
+			$this->render_error($actual_field_name);
+
+			$this->end_wrap();
 		}
 
 		public function input($type, $field_name, $attributes = [], $value = null){
@@ -601,9 +716,10 @@
 			});
 		}
 
-		public function number($field_name, $attributes = array()){
+		public function number($field_name, $attributes = array(), $default = null){
 
-			$this->render_field($field_name, $attributes, function($meta, $value){
+			$this->render_field($field_name, $attributes, function($meta, $value) use($default){
+				$value = !$value && !is_null($default) ? $default : $value;
 				?><input type="number" <?=$meta?> value="<?=$value?>"><?
 			});
 		}
@@ -651,6 +767,35 @@
 			});
 		}
 
+		public function selectGroup($options, $use_key, $val, &$selected, &$select_string, &$depth = 0){
+
+			foreach($options as $k => $v){
+				if(is_array($v)){
+					?>
+						<optgroup label="<?=$k?>" style="padding-left:15px;">
+							<? $this->selectGroup($v, $use_key, $val, $selected, $select_string) ?>
+						</optgroup>
+					<?
+				}
+				else{
+					?>
+						<? !$use_key ? $k = $v : $k = $k; ?>
+						<? if($use_key && $k == 'false' && $val === '') $val = 'false' ?> 
+						<? if(!$selected && $k == $val){
+							$select_string = 'selected';
+							$selected = true;
+							if($k === '' && $val === ''){
+								$select_string = '';
+							}
+						}?>
+						<option value="<?=$k?>" <?=$select_string?> ><?=$v?></option>
+						<? $select_string = ''; ?>
+					<?
+				}
+			}
+
+		}
+
 		public function select($field_name, $options = array(), $attributes = array(), $use_key = false){
 
 			$this->temp_options = $options;
@@ -661,14 +806,50 @@
 				$options 	= $this->temp_options;
 				$use_key 	= $this->temp_use_key;
 				$val 		= $value;
+				$selected 	= false;
+				$select_string = '';
 
 				?>
 					<select <?=$meta?>>
+
+						<? $this->selectGroup($options, $use_key, $val, $selected, $select_string)?>;
+
+						<? /*
 						<? foreach($options as $k => $v): ?>
-							<? !$use_key ? $k = $v : $k = $k; ?>
-							<? if($use_key && $k == 'false' && $val == '') $val = 'false' ?> 
-							<option value="<?=$k?>" <?=$k == $val ? 'selected' : ''?> ><?=$v?></option>
+							<? if(is_array($v)): ?>
+								?>
+									<optgroup label="<?=$k?>">
+										<? foreach($v as $vk => $vv): ?>
+											<? !$use_key ? $vk = $vv : $vk = $vk; ?>
+											<? if($use_key && $vk == 'false' && $val === '') $val = 'false' ?> 
+											<? if(!$selected && $vk == $val){
+												$select_string = 'selected';
+												$selected = true;
+												if($vk === '' && $val === ''){
+													$select_string = '';
+												}
+											}?>
+											<option value="<?=$vk?>" <?=$select_string?> ><?=$vv?></option>
+											<? $select_string = ''; ?>
+										<? endforeach; ?>
+									</optgroup>
+							<? else: ?>
+								<? !$use_key ? $k = $v : $k = $k; ?>
+								<? if($use_key && $k == 'false' && $val === '') $val = 'false' ?> 
+								<? if(!$selected && $k == $val){
+									$select_string = 'selected';
+									$selected = true;
+									if($k === '' && $val === ''){
+										$select_string = '';
+									}
+								}?>
+								<option value="<?=$k?>" <?=$select_string?> ><?=$v?></option>
+								<? $select_string = ''; ?>
+							<? endif; ?>
+							
 						<? endforeach; ?>
+
+						*/ ?>
 					</select>
 				<?
 
@@ -677,7 +858,9 @@
 			});
 		}
 
-		public function checkbox($field_name, $value = 'true', $attributes = array()){
+		/*
+
+		public function checkbox($field_name, $value = 'true', $attributes = array(), $default = null, $label = ''){
 
 		
 			$actual_field_name = $this->field_name($field_name);
@@ -689,12 +872,52 @@
 			
 			
 			?>
-				<input type="checkbox" name="<?=$actual_field_name?>" <?=$this->parse_attributes($attributes)?> value="<?=$value?>" <?= $found ? 'checked' : ''?>>
+				<? if(!is_null($default)): ?>
+					<input type="hidden" name="<?=$actual_field_name?>" value="<?=$default?>">
+				<? endif; ?>
 
-				<? if(isset($this->error[$field_name])): ?>
-					<span class="help-block">
-						<?=$this->error[$field_name][0]?>
-					</span>
+				<? $this->render_field($field_name, $attributes, function($meta, $v) use($value,$found,$label){
+					?><div class="checkbox"><label><input type="checkbox" <?=$meta?> value="<?=$value?>" <?=$found ? 'checked' : ''?>> <?=$label?></label></div><?
+				}); ?>
+
+				
+				
+			
+			<?
+		}
+		*/
+
+		public function checkbox($field_name, $value = 'true', $attributes = array(), $default = null, $label = ''){
+
+		
+			$actual_field_name = $this->field_name($field_name);
+			
+			$found = false;
+			if($this->get_value($field_name) !== ''){
+				$found = true;
+			}
+			
+			
+			?>
+				<? if(!is_null($default)): ?>
+					<input type="hidden" name="<?=$actual_field_name?>" value="<?=$default?>">
+				<? endif; ?>
+
+				<? if($label != ''): ?>
+					<? $this->render_field($field_name, $attributes, function($meta, $v) use($value,$found,$label){
+						?><div class="checkbox"><label><input type="checkbox" <?=$meta?> value="<?=$value?>" <?=$found ? 'checked' : ''?>> <?=$label?></label></div><?
+					}); ?>
+				<? else: ?>
+				
+				
+					<input type="checkbox" name="<?=$actual_field_name?>" <?=$this->parse_attributes($attributes)?> value="<?=$value?>" <?= $found ? 'checked' : ''?>>
+
+					<? if(isset($this->error[$field_name])): ?>
+						<span class="help-block invalid-feedback d-block">
+							<?=$this->error[$field_name][0]?>
+						</span>
+					<? endif; ?>
+
 				<? endif; ?>
 			<?
 		}
@@ -703,16 +926,21 @@
 			?>
 				<input type="radio" name="<?=$this->field_name($field_name)?>" <?=$this->parse_attributes($attributes)?> value="<?=$field_value?>" <?=$this->get_value($field_name) == $field_value ? 'checked' : ''?>>
 
+				<!--
 				<? if(isset($this->error[$field_name])): ?>
 					<span class="help-block">
 						<?=$this->error[$field_name][0]?>
 					</span>
 				<? endif; ?>
+			-->
 			<?
 		}
 
-		public function file($field_name, $attributes = array()){
+		public function file($field_name, $attributes = []){
 
+			$this->render_field($field_name, $attributes, function($meta, $value){
+				?><input type="file" <?=$meta?> value="<?=$value?>"><?
+			});
 		}
 
 		public function prefix($str = ""){
@@ -837,7 +1065,17 @@
 		public function parse_attributes($attributes){
 			$res = "";
 			foreach($attributes as $k => $v){
-				$res .= ' '.$k.'="'.$v.'" ';
+
+				if($k == 'json'){
+					foreach($v as $k2 => $v2){
+						$res .= ' '.$k2."='".json_encode($v2)."' ";
+					}
+				}
+				else{
+					$res .= ' '.$k.'="'.$v.'" ';
+				}
+
+				
 			}
 			return $res;
 		}

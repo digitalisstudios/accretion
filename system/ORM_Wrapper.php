@@ -1,16 +1,32 @@
-<?php
-	class ORM_Wrapper extends Accretion implements Iterator, ArrayAccess{
+<?php	
+
+	class ORM_Wrapper extends Accretion implements Iterator, ArrayAccess, Countable {
 
 		private $_position 	= 0;
 		private $_data 		= array();
 		private $_keys 		= [];
 		private $_results;
 
-		public function __construct($data = array()){
+		public function __construct($data = []){
 			if(!empty($data)){
 				$this->push($data);
 				return $this;
 			}
+		}
+
+		public function __get($name){
+			if(substr($name, 0, 1) == '_'){
+				$new_name = substr($name, 1);
+				if(is_numeric($new_name)){
+					return $this->offsetGet($new_name);
+				}
+			}
+
+			return $this->offsetGet($name);
+		}
+
+		public function __isset($name){
+			return isset($this->_data[$name]);
 		}
 
 		public function __call($name, $value = array()){
@@ -88,6 +104,7 @@
 	        } else {
 	            $this->_data[$offset] = $value;
 	        }
+	        $this->_keys = array_keys($this->_data);
 	    }
 
 	    public function offsetExists($offset) {
@@ -96,6 +113,7 @@
 
 	    public function offsetUnset($offset) {
 	        unset($this->_data[$offset]);
+	        $this->_keys = array_keys($this->_data);
 	    }
 
 	    public function offsetGet($offset) {
@@ -105,6 +123,8 @@
 		public function results(){
 			return $this->_results;
 		}
+
+		
 
 		public function to_array($full = false){
 
@@ -246,7 +266,7 @@
 		}
 
 		public function valid(){
-			return isset($this->_data[$this->_keys[$this->_position]]);
+			return isset($this->_keys[$this->_position]);
 		}
 
 		public function rewind(){
@@ -260,6 +280,10 @@
 
 		public function key(){
 			return $this->_keys[$this->_position];
+		}
+
+		public function nth($offset){
+			return $this->offsetGet($offset);
 		}
 
 		public function next(){
@@ -363,7 +387,7 @@
 
 			if(is_array($data)){
 				foreach($data as $k => $v){
-					$this->_data[] = $v;
+					$this->_data[$k] = $v;
 				}
 			}
 			else{
@@ -375,3 +399,6 @@
 			return $this;
 		}
 	}
+
+	
+?>

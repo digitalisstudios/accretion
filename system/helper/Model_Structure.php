@@ -1,34 +1,45 @@
 <?php
-	class Model_Structure_Helper extends Helper{
+	require_once "Model_Structure_Index.php";
 
+	class Model_Structure_Helper extends Helper
+	{
 		public $_cache;
+		public $_new_structure_generated = false;
+		/* @var Model This is my other class */
+		public $model = 0;
+		public $db_name;
+		public $model_structure_index;
+		public $storage_engine;
 
-		public function __construct($model = false){
-			if($model){
-				if(is_array($model)){
+		public function __construct($model = false) 
+		{
+			if ($model) {
+				if (is_array($model))
 					$model = $model[0];
-				}
 				$this->set_model($model);
 			}
+			$this->model_structure_index = new Model_Structure_Index();
 			return $this;
 		}
 
-		public function set_model($model){
+		public function set_model($model) 
+		{
 			$this->model = $model;
 			$this->db_name = $this->model->db_name();
 			return $this;
 		}
 
-		public function load_cache(){
+		public function load_cache() 
+		{
 
 			$dir = __DIR__.'/Model_Structure/';
-			if(!file_exists($dir)) mkdir($dir, 0755, true);
+			if (!file_exists($dir)) mkdir($dir, 0755, true);
 
-			if(!file_exists($dir.'cache.json')){
+			if (!file_exists($dir.'cache.json')) {
 				
 				$records = [];
-				foreach(glob(MODEL_PATH.'*.php') as $file){
-					$records[pathinfo($file, PATHINFO_FILENAME)] = filemtime($file)-1;
+				foreach (glob(MODEL_PATH.'*.php') as $file) {
+					$records[pathinfo($file, PATHINFO_FILENAME)] = filemtime($file);
 				}
 
 				$handle = fopen($dir.'cache.json', 'w+');
@@ -41,9 +52,10 @@
 			return $this->_cache;
 		}
 
-		public function needs_update(){
+		public function needs_update() 
+		{
 
-			if(is_null($this->_cache)) $this->load_cache();
+			if (is_null($this->_cache)) $this->load_cache();
 
 			$model_name = $this->model->model_name();
 			$file_path 	= MODEL_PATH.$model_name.'.php';
@@ -52,10 +64,11 @@
 			return (!isset($this->_cache[$model_name]) || isset($this->_cache[$model_name]) && $this->_cache[$model_name] !== $time) ? true : false;
 		}
 
-		public function update_cache(){
+		public function update_cache() 
+		{
 
 			//LOAD THE CACHE IF NEEDED
-			if(is_null($this->_cache)) $this->load_cache();
+			if (is_null($this->_cache)) $this->load_cache();
 
 			//GET SOME VARS
 			$model_name 				= $this->model->model_name();
@@ -69,13 +82,16 @@
 			fwrite($handle, json_encode($this->_cache));
 			fclose($handle);
 
+			unlink($dir.'view_cache.json');
+
 			return $this;
 		}
 
-		public function model_change($model_name, $change_type, $sql, $rollback){
+		public function model_change($model_name, $change_type, $sql, $rollback) 
+		{
 
 			/*
-			if(!DB::get_row("SHOW TABLES LIKE 'model_change'")){
+			if (!DB::get_row("SHOW TABLES LIKE 'model_change'")) {
 
 				$res = DB::query("
 					CREATE TABLE model_change(
@@ -93,26 +109,28 @@
 			//DB::insert('model_change', array('model_change_id' => '', 'model_change_type' => $change_type, 'model_name' => $model_name, 'model_change_sql' => $sql, 'model_change_rollback' => $rollback));
 		}
 
-		public function generate_column_sql($field_name, $data){
+		public function generate_column_sql($field_name, $data) 
+		{
 			$type 			= $data['Type'];
 			$null 			= isset($data['Null']) && $data['Null'] == 'YES' ? 'NULL' : 'NOT NULL';
 			$key 			= isset($data['Key']) && $data['Key'] == 'PRI' ? 'PRIMARY KEY' : '';
 			$default 		= isset($data['Default']) && $data['Default'] != '' ? "DEFAULT '{$data['Default']}'" : '';
 			$auto_increment = isset($data['Extra']) && $data['Extra'] == 'auto_increment' ? 'AUTO_INCREMENT PRIMARY KEY' : ''; 
 
-			
-
-			if($type == 'timestamp'){
+			if ($type == 'timestamp') {
 				$type 		= 'TIMESTAMP';
 				$default 	= isset($data['Default']) && $data['Default'] != '' ? "DEFAULT {$data['Default']}" : '';
-			}
+			} 
 
-			return trim("`{$field_name}` {$type} {$null} {$default} {$key} {$auto_increment}");
+			return trim("`{$field_name}` {$type} {$default} {$null} {$key} {$auto_increment}");
 		}
 
-		public function set_defaults($force){
+		public function set_defaults($force) 
+		{
+
 			
-			if(!$force && !$this->needs_update()) return false;
+			
+			if (!$force && !$this->needs_update()) return false;
 			
 
 			//SET THE MODEL NAME
@@ -121,7 +139,7 @@
 			$this->db_name = $this->model->db_name();
 
 			//WAS THE TABLE NAME EXPLICITLY DEFINED
-			if(isset($this->model->_table)){
+			if (isset($this->model->_table)) {
 				$this->_table = $this->model->_table;
 			}
 			else{				
@@ -129,7 +147,7 @@
 			}
 
 			//IF THE TABLE HAS BEEN CACHED IN THE LAST DAY IGNORE IT
-			/*if(isset($_SESSION['table_cache'][$this->_table]) && (strtotime($_SESSION['table_cache'][$this->_table]) > strtotime('-1 day')) && !$force){				
+			/*if (isset($_SESSION['table_cache'][$this->_table]) && (strtotime($_SESSION['table_cache'][$this->_table]) > strtotime('-1 day')) && !$force) {				
 				return false;
 			}*/
 
@@ -138,8 +156,8 @@
 			$key_name = key($tables[0]);
 
 			$this->table_exists 	= false;
-			foreach($tables as $table){
-				if($this->_table == $table[$key_name]){
+			foreach ($tables as $table) {
+				if ($this->_table == $table[$key_name]) {
 					$this->table_exists = true;
 					break;
 				}
@@ -151,72 +169,78 @@
 			//GET THE MODEL STRUCTURE
 			$this->model_structure 	= isset($this->model->structure) ? $this->model->structure : false;
 
-			return true;
+			$this->storage_engine = $this->table_exists ? \DB::set($this->db_name)->get_row("SHOW TABLE STATUS WHERE Name = '{$this->_table}'", 'Engine') : false;
 
+			return true;
 		}
 
-		public function generate($force = false){
+		public function generate_missing_models() 
+		{
 
+			$models = glob(MODEL_PATH.'/*.php');
+
+			//GET THE MODEL NAME
+			$model_name = pathinfo($file)['filename'];				
+
+			//TRY TO LOAD THE MODEL
+			$model = \Model::get($model_name);
+
+			$tables = [];
+
+			if ($model) {
+				$tables[$model->db_name()][$model->_table()] = get_class($model_name);
+			}
+		}
+
+		public function generate($force = false) 
+		{
 			//ONLY ALLOW FOR MODELS
 			$parents = array_values(class_parents($this->model));			
-			if(!in_array('Model', $parents)) return $this;
+			if (!in_array('Model', $parents)) 
+				return $this;
 
 			//ALLOW URL FORCING
-			if(isset($_GET['model_sync'])) $force = true;
+			//$force = $force ? $force : isset($_GET['model_sync']);
+			if (!$this->set_defaults($force)) return $this;
 
-			if(!$this->set_defaults($force)) return $this;
-
-			//NO TABLE AND NO MODEL STRUCTURE 
-			if(!$this->table_exists && !$this->model_structure){
+			if (!$this->table_exists && !$this->model_structure)		//NO TABLE AND NO MODEL STRUCTURE 
 				return $this->generate_new_model_and_structure();
-			}
-
-			//NO TABLE BUT MODEL STRUCTURE
-			else if(!$this->table_exists && $this->model_structure){
+			else if (!$this->table_exists && $this->model_structure)	//NO TABLE BUT MODEL STRUCTURE
 				return $this->generate_new_model_structure();
-			}
-
-			//TABLE EXISTS BUT NO MODEL STRUCTURE
-			else if($this->table_exists && !$this->model_structure){
+			else if ($this->table_exists && !$this->model_structure)	//TABLE EXISTS BUT NO MODEL STRUCTURE
 				return $this->generate_new_structure();
-			}
-
-			//BOTH TABLE AND MODEL STRUCTURE EXIST
-			else if($this->table_exists && $this->model_structure){
-
+			else if ($this->table_exists && $this->model_structure) {	//BOTH TABLE AND MODEL STRUCTURE EXIST
 				//CHECK FOR ALTERATIONS
 				$field_key 			= 0;
 				$altered_columns	= array();
 				$new_columns		= array();
 
-				foreach($this->model_structure as $field_name => $data){
-
+				foreach ($this->model_structure as $field_name => $data) {
 					$found = false;
-					
 					//CYCLE THE TABLE STRUCTURE
-					foreach($this->table_structure as $k => $v){
+					foreach ($this->table_structure as $k => $v) {
 						
 						//THE FIELD WAS FOUND
-						if($v['Field'] == $field_name){
+						if ($v['Field'] == $field_name) {
 							
 							//CHECK EACH OF THE FIELD VALUES
-							foreach($v as $column_key => $column_data){
+							foreach ($v as $column_key => $column_data) {
 
 								//SKIP UNSET DATA TYPES
-								if(in_array($column_key, array('Field', 'Key'))) continue;
-								if($column_data == '' && !isset($data[$column_key]) || $column_key == 'Field') continue;
-								if($column_data == 'NO' && !isset($data[$column_key])) continue;
+								if (in_array($column_key, array('Field', 'Key'))) continue;
+								if ($column_data == '' && !isset($data[$column_key]) || $column_key == 'Field') continue;
+								if ($column_data == 'NO' && !isset($data[$column_key])) continue;
 
 
 
 								//CHECK IF THE DATA DOES NOT MATCH
-								if(isset($data[$column_key]) && $column_data !== trim($data[$column_key])){
+								if (isset($data[$column_key]) && $column_data !== trim($data[$column_key])) {
 									
 									unset($v['Field']);
 									$altered_columns[] = array(
 										'field_name' 	=> $field_name,
 										'field_data' 	=> $data,
-										'rollback_data' => $v
+										//'rollback_data' => $v
 									);
 									break;
 								}
@@ -229,66 +253,86 @@
 					}
 
 					//THE COLUMN WAS NOT FOUND IN THE TABLE
-					if(!$found){
-
-						$new_columns[] = array(
+					if (!$found) {
+						$new_columns[] = [
 							'field_name' 	=> $field_name,
 							'field_data' 	=> $data,
-							'rollback_data' => $v
-						);
+							//'rollback_data' => $v
+						];
 					}
-					$field_key ++;
+					$field_key++;
 				}
-
 				
 				//THERE ARE COLUMNS THAT NEED UPDATING
-				if(!empty($altered_columns)){					
+				if (!empty($altered_columns)) {					
 				
 					//UPDATE THE ALTERED COLUMNS
-					foreach($altered_columns as $column){
+					foreach ($altered_columns as $column) {
 						$sql = "ALTER TABLE `{$this->_table}` CHANGE `{$column['field_name']}` ".$this->generate_column_sql($column['field_name'], $column['field_data']);
-						$rollback = "ALTER TABLE `{$this->_table}` CHANGE `{$column['field_name']}`".$this->generate_column_sql($column['field_name'], $column['rollback_data']);						
+						//$rollback = "ALTER TABLE `{$this->_table}` CHANGE `{$column['field_name']}`".$this->generate_column_sql($column['field_name'], $column['rollback_data']);						
 						\DB::set($this->db_name)->query($sql);
 						//$this->model_change($this->model_name, 'alter_table', base64_encode($sql), base64_encode($rollback));
 					}
 				}
 
 				//THERE ARE NEW COLUMNS THAT NEED TO BE ADDED
-				if(!empty($new_columns)){	
+				if (!empty($new_columns)) {	
 
 					//ADD THE NEW COLUMNS
-					foreach($new_columns as $column){
+					foreach ($new_columns as $column) {
 						$sql = "ALTER TABLE `{$this->_table}` ADD ".$this->generate_column_sql($column['field_name'], $column['field_data']);
-						$rollback = "ALTER TABLE `{$this->_table}` ADD ".$this->generate_column_sql($column['field_name'], $column['rollback_data']);
+						//$rollback = "ALTER TABLE `{$this->_table}` ADD ".$this->generate_column_sql($column['field_name'], $column['rollback_data']);
 						\DB::set($this->db_name)->query($sql);
 						//$this->model_change($this->model_name, 'alter_table', base64_encode($sql), base64_encode($rollback));
 					}
 				}
 
-				
+				if($this->storage_engine && $this->storage_engine != 'InnoDB') \DB::set($this->db_name)->query("ALTER TABLE `{$this->_table}` ENGINE=InnoDB");
+
 				$this->update_cache();
 				
 			}
 
 
 			//ADD THE TABLE TO THE TABLE CACHE
-			session_start();
-			$_SESSION['table_cache'][$this->_table] = date('Y-m-d H:i:s');
-			session_write_close();
+			\Session::update(function() {
+				$_SESSION['table_cache'][$this->_table] = date('Y-m-d H:i:s');
+			});
+
+			
+
+			//MOVED MODEL INDICIES SO THAT THEY DONT RUN EVERY SINGLE TIME A MODEL IS LOADED
+			$idx_defined =
+				$this->model->idx
+				|| $this->model->spat_idx
+				|| $this->model->uniq_idx
+				|| $this->model->ftxt_idx;
+
+			if ($idx_defined)
+				$this->model_structure_index->update_indices($this);
+			else
+				$this->model_structure_index->update_removed_indices($this);
+
+			if ($this->model->foreign_keys)
+				$this->model_structure_index->update_foreign_keys($this);
+			else
+				$this->model_structure_index->update_removed_keys($this);
+			
 			return $this;
 		}
 
-		public function generate_new_model_and_structure(){
+		public function generate_new_model_and_structure() 
+		{
 			$table_prefix = strtolower($this->model_name);
 				
 			$sql = "
 				CREATE TABLE `{$this->_table}`(
 					`{$table_prefix}_id` int(11) AUTO_INCREMENT PRIMARY KEY,
 					`{$table_prefix}_created` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-				)
+				) ENGINE=InnoDB;
 			";
 
-			$rollback = "DROP TABLE IF EXISTS `{$this->_table}`";
+			//$rollback = "DROP TABLE IF EXISTS `{$this->_table}`";
 			
 			//CREATE THE TABLE
 			\DB::set($this->db_name)->query($sql);
@@ -299,27 +343,22 @@
 			return $this->generate();
 		}
 
-		public function generate_new_model_structure(){
+		public function generate_new_model_structure() 
+		{
 
 			//GENERATE TABLE VARS FOR SQL
 			$table_vars = array();
 
-			foreach($this->model_structure as $field_name => $data){
-
-				$table_vars[] 	= "	".$this->generate_column_sql($field_name, $data);
-			}
+			foreach ($this->model_structure as $field_name => $data) $table_vars[] 	= "	".$this->generate_column_sql($field_name, $data);
 
 			$table_vars = implode(",\n", $table_vars);
 
 			//GENERATE SQL
-			$sql = "CREATE TABLE `{$this->_table}` \n (\n{$table_vars}\n)";
-
-			//pr($sql);
-			//exit;
+			$sql = "CREATE TABLE `{$this->_table}` \n (\n{$table_vars}\n) ENGINE=InnoDB;";
 
 			//INSERT THE TABLE
 			$res = \DB::set($this->db_name)->query($sql);
-			$rollback = "DROP TABLE IF EXISTS `{$this->_table}`";
+			//$rollback = "DROP TABLE IF EXISTS `{$this->_table}`";
 
 			$this->update_cache();
 
@@ -328,24 +367,29 @@
 			return;
 		}
 
-		public function generate_new_structure(){
+		public function generate_new_structure() 
+		{
+
+			//FORCE THIS TO UPDATE THE CACHE
+			//$this->update_cache();
+
 			//GENERATE THE SOURCE CODE
-				$structure_parts = "";
+			$structure_parts = "";
 
-				foreach($this->table_structure as $k => $v){
+			foreach ($this->table_structure as $k => $v) {
 
-			$structure_parts .= "
+				$structure_parts .= "
 			'{$v['Field']}' => array(";
-				foreach($v as $v_type => $v_data){
-					if($v_data == "") continue;
-					if($v_type == 'Field') continue;
-					if($v_type == 'Key') continue;
-					if($v_type == 'Null' && $v_data == "NO") continue;
+				foreach ($v as $v_type => $v_data) {
+					if ($v_data == "") continue;
+					if ($v_type == 'Field') continue;
+					if ($v_type == 'Key') continue;
+					if ($v_type == 'Null' && $v_data == "NO") continue;
 					$structure_parts .= "'{$v_type}' => \"{$v_data}\",";
 				}
 
-			$structure_parts .= "),";
-				}
+				$structure_parts .= "),";
+			}
 
 				$structure_var = '
 
@@ -354,6 +398,8 @@
 			'.$structure_parts.'
 		);'."\n";
 
+				$this->model->structure =  eval("array(".$structure_parts.");");
+				
 
 				//SETUP VARS
 				$lines 		= array();
@@ -361,20 +407,25 @@
 				
 				//LOAD THE MODEL SOURCE CODE
 				$file_path 	= APP_PATH.'model/'.$this->model_name.'.php';
-				$handle 	= fopen($file_path, 'r+');					
+
+				if (strpos(file_get_contents($file_path), 'public $structure = array(') !== false) {
+					return $this;
+				}
+
+				$handle 	= fopen($file_path, 'r');					
 
 				//CYCLE THE CODE LINE BY LINE
 				$write_next_line = false;
-				while(($buffer = fgets($handle)) !== false){
+				while(($buffer = fgets($handle)) !== false) {
 
-					if($write_next_line){
+					if ($write_next_line) {
 						$lines[] = $structure_var;
 						$write_next_line = false;
 
 					}
 
 					//OPEN OF CLASS CHECK
-					if(strpos(trim($buffer), $search_for) !== false){
+					if (strpos(trim($buffer), $search_for) !== false) {
 						$write_next_line = true;
 					}
 
@@ -383,16 +434,19 @@
 				fclose($handle);
 
 				//REOPEN THE FILE AND CLEAR IT OUT
-				$handle = fopen($file_path, 'w');
+				$handle = fopen($file_path, 'w+');
 
 				//WRITE THE LINES TO THE FILE
-				foreach($lines as $line){
+				foreach ($lines as $line) {
 					fwrite($handle, $line);
 				}
 
 				fclose($handle);
 
 				$this->update_cache();
+				$this->set_defaults(true);
+				
+
+			return $this;
 		}
 	}
-?>

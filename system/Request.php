@@ -10,11 +10,13 @@
 
 		}
 
-		public static function is_ajax(){		
+		public static function is_ajax(){
+			if($_SERVER['accretion_context'] == 'api') return true;		
 			return (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') ? true : false;
 			
 		}
 
+		/*
 		public static function return_json($result = null){
 
 			//RETURN JSON INSTEAD OF THE VIEW IF NEEDED
@@ -25,14 +27,119 @@
 			}
 			
 		}
+		*/
+
+		private static function _print_json($result = null){
+
+			header('Content-type: application/json');
+
+			if($_SERVER['accretion_context'] == 'api'){
+
+				$error = [];
+
+				if(http_response_code() !== 200){
+					$error = $result;
+					unset($error['error']);
+					$result = null;
+					if($_SERVER['dev_mode'] == 'true'){
+						$stack = debug_backtrace();
+						array_shift($stack);
+						array_shift($stack);
+						array_shift($stack);
+
+						$error['stack'] = $stack;
+					} 
+				}
+
+				$data = [
+					'success' 		=> http_response_code() == 200,
+					'statusCode' 	=> http_response_code(),
+					'response' 		=> $result,
+					'error' 		=> $error
+				];
+			}
+			else{
+				$data = $result;
+			}
+
+			die(json_encode($data, JSON_PRETTY_PRINT));
+
+		}
+
+		public static function return_json($result = null){			
+
+			//RETURN JSON INSTEAD OF THE VIEW IF NEEDED
+			if($_SERVER['accretion_context'] == 'api' || (Request::is_ajax() && (!Request::get('headers') || Request::get('headers') && Request::get('headers') !== 'true') && !is_null($result) || (is_object($result) || is_array($result)))){	
+
+				if(is_object($result)){
+					if(get_class($result) == 'ORM_Wrapper'){
+						
+						if($_SERVER['accretion_context'] == 'api'){
+							self::_print_json(['object_type' => 'Collection', 'object_data' => $result->to_array(true)]);
+						}
+
+						self::_print_json($result->to_array(true));
+
+						//header('Content-type: application/json');
+						//die(json_encode($result->to_array(true), JSON_PRETTY_PRINT));
+					}
+					elseif(is_model($result)){
+						if($_SERVER['accretion_context'] == 'api'){
+							self::_print_json(['object_type' => $result->model_name(), 'object_data' => $result->expose_data()]);
+						}
+
+						self::_print_json($result->expose_data());
+						//header('Content-type: application/json');
+						//die(json_encode($result->expose_data(), JSON_PRETTY_PRINT));
+					}					
+				}
+				
+				if(!is_string($result)){
+					self::_print_json($result);
+					//header('Content-type: application/json');
+					//die(json_encode($result, JSON_PRETTY_PRINT));
+
+				}
+
+				if($_SERVER['accretion_context'] == 'api'){
+					self::_print_json($result);
+					//header('Content-type: application/json');
+					//die(json_encode(['content' => $result], JSON_PRETTY_PRINT));
+				}
+
+				die($result);
+				
+				//GENERATE JSON OUTPUT
+				//die((is_object($result) && get_class($result) == 'ORM_Wrapper') ? json_encode($result->to_array()) : (!is_string($result) ? json_encode($result) : $result));
+			}		
+		}
+
 
 		//RENDER A REQUEST ERROR
-		public static function error($type = 404){
+		public static function error($type = 404, $details = null, $message = null){
+
+			$messages = [
+				400 => "Bad Request",
+				401 => "Not Authenticated",
+				404 => "The page you requested could not be found.",
+				403 => "You do not have access to view this page.",
+				500 => "An unknown system error occured.",
+				511 => "Not Authenticated",
+			];
+
+			if(is_null($message)){
+				$message = isset($messages[$type]) ? $messages[$type] : $messages[404];
+			}
 			
 			//SET THE RESPONSE CODE
 			http_response_code($type);
 
+			if(\Request::is_ajax()){
+				return \Request::return_json(['error' => $type, 'message' => $message, 'details' => $details]);
+			}
+
 			//LOAD THE ERROR TEMPLATE
+			\View::partial('header');
 			$file_path = VIEW_PATH."http_error/".$type.".php";
 
 			if(file_exists($file_path)){
@@ -40,8 +147,13 @@
 			}
 			else{
 				echo "<h1>Error: {$type}</h1><br>";
-				echo "<p>The page you requested could not be found</p>";
-			}			
+				echo "<p>{$message}</p>";
+
+				if(!is_null($details)){
+					echo "<p>{$details}</p>";
+				}
+			}
+			\View::partial('footer');
 			exit;
 		}
 
@@ -222,6 +334,11 @@
 			}
 
 			if($parameter){
+
+				$arr = Request::$post;
+
+				return getArrayByPath($arr, $parameter);
+
 				if(isset(Request::$post[$parameter])){
 					return Request::$post[$parameter];
 				}
@@ -313,5 +430,14 @@
 					echo "";
 				}
 			});
+		}
+
+		public static function streamInput(){
+
+			$fd = fopen( "php://stdin", "r" );			
+			$message = "";
+			while (!feof( $fd )) $message .= fread( $fd, 1024 );
+			fclose( $fd );
+			return $message;
 		}
 	}

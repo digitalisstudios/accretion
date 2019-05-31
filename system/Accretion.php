@@ -21,10 +21,14 @@
             //ONLY RUN INITIALIZATION IF THE CALLING CLASS IS THE FRAMEWORK
             if(get_class($this) == 'Accretion'){
 
+                //$dir = dirname(__FILE__);
+
                 //DEFINE THE CLASSES TO LOAD
                 $classes = [
                     'Functions',
                     '../config/Global_Functions', 
+                    '../vendor/autoload',
+                    /*
                     'Session', 
                     'Request', 
                     'View', 
@@ -33,17 +37,23 @@
                     'ORM_Wrapper', 
                     '../config/Global_Model_Method',
                     'Magic_Model',
+                    'Model_Orm',
                     'Model',
+                    'Model_Data',
                     'DB', 
                     'Auth', 
                     'Config', 
                     'Reflect',
                     'Buffer',
                     'Storage',
+                    */
                 ];
 
+                 //LOAD THE CLASSES
+               // foreach($classes as $class) require_once $dir.'/system/'.$class.'.php';  
+
                 //LOAD THE CLASSES
-                foreach($classes as $class) require_once __DIR__.'/'.$class.'.php';       
+                foreach($classes as $class) require_once dirname(getcwd()).'/system/'.$class.'.php';       
 
                 //INITIALIZE THE CONFIGURATION
                 \Config::init();
@@ -52,11 +62,36 @@
 
         //HANDLE ACCRETION ROUTING
         public function route(){
+
+            if($route = \Routes::checkRoute()){
+
+                $route->run();
+
+            }
+            else{
+
+                //SET ERROR FOR API
+                if($_SERVER['accretion_context'] == 'api')  \Request::error(404);
+
+                //GET THE CONTROLLER
+                $res = \Controller::get();
+           }
             
-            //GET THE CONTROLLER
-            $res = \Controller::get();
+           
 
             //SEND BACK THE ACCRETION OBJECT
             return $this;
         }
     }
+
+    spl_autoload_register(function ($class_name) {
+
+        $formatted = \Controller::format_url($class_name);
+
+        $model_check = \Storage::get('_model_names.'.$formatted);
+
+        if($model_check){
+            require_once $model_check;
+            return;
+        }
+    });

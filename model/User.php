@@ -1,5 +1,9 @@
 <?php
 
+	//namespace App;
+
+	//use Model;
+
 	class User extends Model{
 		
 		public $structure = array(			

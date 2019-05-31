@@ -5,31 +5,62 @@
 
 		}
 
-		public function check_filename($path){
+		public function createUnique($path = null, $ext = false, $content = null){
 
-			if(!is_dir($path)){
-				if(is_file($path)){
-					$path = dirname($path);
-				}
+			$path = !$path ? STORAGE_TEMP_PATH : $path;
+
+			$filePath = $this->check_filename($path, true, $ext);
+
+			$dir = dirname($filePath);
+
+			if(!file_exists($dir)) mkdir($dir, 0777, true);
+
+			$handle = fopen($filePath, 'w+');
+			if(!is_null($content)){
+				fwrite($handle, $content);
 			}
+			fclose($handle);
+
+			return $filePath;
+		}
+
+		public function createUniqueFolder($path = null){
+			
+			$path = !$path ? STORAGE_TEMP_PATH : $path;
+
+			$filePath = $this->check_filename($path, true);
+
+			mkdir($filePath, 0777);
+
+			return rtrim($filePath, '/').'/';
+		}
+
+		public function check_filename($path, $fullPath = false, $ext = false){
+
+			$ext = $ext ? ".{$ext}" : "";
+
+			if(!is_dir($path) && is_file($path)) $path = dirname($path);
+
+			if(!file_exists($path)) mkdir($path, 0777, true);
 
 			$path = realpath($path).'/';
 
-			$microtime 			= microtime();
-			$microtime_parts 	= explode(' ', $microtime);
-			$nano_seconds 		= explode('.', $microtime_parts[0])[1];
-			$user_id 			= isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 1500;
-			$hash 				= $user_id.'_'.date('Ymd\THis', $microtime_parts[1]).$nano_seconds;
+			//$microtime 			= microtime();
+			//$microtime_parts 	= explode(' ', $microtime);
+			//$nano_seconds 		= explode('.', $microtime_parts[0])[1];
+			//$user_id 			= isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 1500;
+			//$hash 				= $user_id.'_'.date('Ymd\THis', $microtime_parts[1]).$nano_seconds;
+			$hash = md5(microtime(true));
 
-			if(file_exists($path.$hash)){
+			if(file_exists($path.$hash.$ext)){
 				$number = 0;
-				while(file_exists($path.$hash)){
+				while(file_exists($path.$hash.$ext)){
 					$number++;
-					$hash = $number.'_'.$hash;
+					$hash = $number.'_'.$hash.$ext;
 				}
 			}
 
-			return $hash;
+			return ($fullPath ? $path : "").$hash.$ext;
 	    }
 
 	    public function get_files_by_date($dir, $start_date = false, $end_date = false, $res_files = array()){
@@ -97,4 +128,3 @@
 			return $res_files;
 		}
 	}
-?>
