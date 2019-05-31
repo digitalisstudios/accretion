@@ -279,65 +279,7 @@
 
 			}
 		}
-
-		/*
-		public static function load_models(){
-
-			if(!\Storage::get('_orm_methods')){
-				
-				$methods = get_class_methods('Model_Orm');
-
-				foreach($methods as $k => $method){
-
-					if(substr($method, 0, 5) == '_orm_') $methods[substr($method, 5)] = $method; 
-
-					unset($methods[$k]);	
-				} 
-
-				\Storage::set('_orm_methods', new \ORM_Wrapper($methods));
-			}
-
-			//SET MODEL NAMES IF NEEDED
-			if(!\Storage::get('_model_names')) foreach(glob(MODEL_PATH.'*.php') as $model_path){
-
-				$class_name = pathinfo($model_path, PATHINFO_FILENAME);
-
-				\Storage::set('_model_names.'.\Controller::format_url($class_name), $model_path);
-
-			}
-		}
-		*/
-
-		/*
-		public static function load_models(){
-
-			if(!\Storage::get('_orm_methods')){
-				$methods = get_class_methods('Model_Orm');
-				//foreach($methods as $k => $method) if(substr($method, 0, 5) !== '_orm_') unset($methods[$k]);
-				foreach($methods as $k => $method){
-					if(substr($method, 0, 5) == '_orm_'){
-						$methods[substr($method, 5)] = $method;
-					}
-					
-					unset($methods[$k]);	
-				} 
-				\Storage::set('_orm_methods', new \ORM_Wrapper($methods));
-			}
-
-			//SET MODEL NAMES IF NEEDED
-			if(!\Storage::get('_model_names')) foreach(glob(MODEL_PATH.'*.php') as $model_path){
-
-				$class_name = pathinfo($model_path, PATHINFO_FILENAME);
-
-				\Storage::set('_model_names.'.\Controller::format_url($class_name), $model_path);
-
-
-				
-
-				include_once $model_path;
-			}
-		}
-		*/
+		
 
 		//RECURSIVELY PRELOAD ALL OF THE CONTROLLERS
 		public static function load_controllers($path = false){			
@@ -397,9 +339,6 @@
 
 			//SET THE SETTINGS FILE
 			$settings = dirname(getcwd()).'/config/Settings.php';
-
-			//SET THE SETTINGS FILE
-			//$settings = dirname(__FILE__).'/../config/Settings.php';
 
 			//INCLUDE THE SETTINGS FILE
 			include $settings;

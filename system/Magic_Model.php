@@ -48,15 +48,6 @@
 
 			$method_name = \Storage::get('_orm_methods.'.$name);
 
-			/*
-			if($method_name){
-
-				$res = \Model::get(get_called_class());
-
-				return isset($value[0]) ? $res->$method_name($value[0]) : $res->$method_name();
-			}
-			*/
-
 			if($method_name){
 
 				$res = \Model::get(get_called_class());
@@ -151,53 +142,6 @@
 			return null;
 		}
 
-		public function &__get2($name){
-
-			if(isset($this->_data->_data[$name])) return $this->_data->_data[$name];
-
-			//CHECK IF CASTING AS DATE
-			if(substr($name, 0, 6) == '_date_') return new DateTime($this->{substr($name, 6)});
-
-			//CHECK IF CASTING AS BOOLEAN
-			if(substr($name, 0, 6) == '_bool_') return filter_var($this->{substr($name, 6)}, FILTER_VALIDATE_BOOLEAN);
-
-			if(substr($name, 0, 7) == '_phone_') return format_phone($this->{substr($name, 7)});
-			
-			//GET THE MODEL NAME
-			$model_name = $this->model_name();
-
-			//BOOT THE MODEL RELATIONSHIPS
-			$this->boot_relationships();
-
-			//CHECK IF THE RELATIONSHIP CACHE EXISTS
-			if(\Storage::get('_relationship_cache.'.$model_name)){
-
-				//SET DEFAULTS
-				$method_name 	= $name;
-				$params 		= ['single' => true];
-
-				//HANDLE LOADING ALL RELATIONSHIP
-				if(substr($name, 0, 5) == '_all_'){
-					$method_name 	= substr($name, 5);
-					$params = null;
-				}
-
-				//HANDLE RELATIONSHIP WITHOUT LOADING
-				elseif(substr($name, 0, 2) == '__'){
-					$method_name 	= substr($name, 2);
-					$params 		= false;
-				}
-
-				//LOOP THROUG THE RELATIONSHIPS AND LOAD THE FIRST ONE (IF WE ARENT LOADING ADD THE WRAPPER)
-				foreach(\Storage::get('_relationship_cache.'.$model_name) as $type => $relationships) if(isset($relationships->$method_name)){
-					return $this->$method_name($params);
-				} 
-			}
-			
-
-			return null;
-		}
-
 		public function __set($name, $value){
 			return $this->_data[$name] = $value;
 		}
@@ -219,106 +163,23 @@
 			return implode("\n", $parts);			
 		}
 
-		/*
-		public function __callStatic($name, $value = array()){
-
-			return Model::get($name)->where($value);			
-		}
-		*/
-
-		//FORWARD UNFOUND METHODS
-		/*public function __call($name, $value){
-
-			$this->boot_relationships();
-
-			//TRY TO FORWARD THE METHOD
-			$res = $this->forward($name, $value);
-
-			//IF THE METHOD FORWARDED
-			if($res !== false){
-				return $res;
-			}
-		}
-		*/
-
 		//FORWARD UNFOUND METHODS
 		public function __call($name, $value){
 			$this->boot_relationships();
 
 			$method_name = \Storage::get('_orm_methods.'.$name);
 
-			if($method_name){
-
-				return isset($value[0]) ? call_user_func_array([$this, $method_name], $value) : $this->$method_name();
-				//return isset($value[0]) ? $this->$method_name($value[0]) : $this->$method_name();
-
-				/*
-				if(isset($value[0])){
-					return $this->$method_name($value[0]);
-				}
-
-				return $this->$method_name();
-				*/
-			}
-
-			/*
-
-			$relationship = '_relationship_'.$name;
-			
-			if(isset($this->$relationship)){
-				if(empty($this->$relationship->_only)){
-					return $this->$relationship;
-				}
-				
-			}
-
-			*/
+			if($method_name) return isset($value[0]) ? call_user_func_array([$this, $method_name], $value) : $this->$method_name();
 
 			//TRY TO FORWARD THE METHOD
 			$res = $this->forward($name, $value);
 
 			//IF THE METHOD FORWARDED
-			if($res !== false){
-				return $res;
-			}
+			if($res !== false) return $res;
 		}
 
 		//FORWARD TO APPROPRIATE RELATIONSHIP METHOD
 		public function forward($name, $value){
-
-			/*
-			$storage = \Storage::get("_relationship_cache.{$this->model_name()}");
-
-			if(!is_null($storage)){
-
-				$lcname = strtolower($name);
-
-				foreach(['has_many', 'has_many_through','has_one','has_one_through'] as $rtype){
-
-				}
-
-				foreach($storage as $relationshipType => $relations){
-					if(isset($relations[$lcname])){
-
-						if($relationshipType == '_has_one'){
-							return $this->new_get_has($name, $value, $relations[$lcname], true);
-						}
-						elseif($relationshipType == '_has_one_through'){
-							return $this->new_get_has_through($name, $value, $relations[$lcname], true);
-						}
-						elseif($relationshipType == '_has_many'){
-							return $this->new_get_has($name, $value, $relations[$lcname]);
-						}
-						elseif($relationshipType == '_has_many_through'){
-							return $this->new_get_has_through($name, $value, $relations[$lcname]);
-						}
-					}
-				}
-			}
-
-			return false;
-			*/
-			
 
 			//LOOP THROUGH THE FORWARD METHODS
 			foreach(array('forward_has_many','forward_has_many_through','forward_has_one','forward_has_one_through','forward_morph_one','forward_morph_many') as $forwarder){
